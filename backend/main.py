@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from backend.database import engine
-from backend.routers import auth
+from backend.routers import auth, users, patients, doctors, prescriptions, schedules, inventory, dispensing
 
 app = FastAPI(
     title="Medicine Dispenser System API",
@@ -11,6 +11,13 @@ app = FastAPI(
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
+app.include_router(patients.router, prefix="/api/v1")
+app.include_router(doctors.router, prefix="/api/v1")
+app.include_router(prescriptions.router, prefix="/api/v1")
+app.include_router(schedules.router, prefix="/api/v1")
+app.include_router(inventory.router, prefix="/api/v1")
+app.include_router(dispensing.router, prefix="/api/v1")
 
 @app.on_event("startup")
 def startup():
