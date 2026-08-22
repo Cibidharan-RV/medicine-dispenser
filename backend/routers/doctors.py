@@ -21,7 +21,7 @@ def read_doctor(doctor_id: int, db: Session = Depends(get_db), current_user: Use
     return db_doctor
 
 @router.put("/{doctor_id}", response_model=DoctorOut)
-def update_doctor(doctor_id: int, doctor_update: DoctorUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR", "ADMIN"))):
+def update_doctor(doctor_id: int, doctor_update: DoctorUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
     if current_user.role == "DOCTOR" and current_user.userid != doctor_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this doctor")
     return doctor_service.update_doctor(db, doctor_id, doctor_update)

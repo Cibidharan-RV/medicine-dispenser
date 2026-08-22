@@ -21,11 +21,8 @@ def read_prescriptions(patient_id: Optional[int] = None, doctor_id: Optional[int
     return prescription_service.get_prescriptions(db, patient_id=patient_id, doctor_id=doctor_id)
 
 @router.post("/", response_model=PrescriptionOut, status_code=status.HTTP_201_CREATED)
-def create_prescription(prescription: PrescriptionCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR", "ADMIN"))):
+def create_prescription(prescription: PrescriptionCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
     doctor_id = current_user.userid
-    if current_user.role == "ADMIN" and prescription.doctor_id:
-        doctor_id = prescription.doctor_id
-        
     return prescription_service.create_prescription(db, prescription, doctor_id=doctor_id)
 
 @router.get("/{prescription_id}", response_model=PrescriptionOut)
@@ -49,7 +46,7 @@ def read_prescription(prescription_id: int, db: Session = Depends(get_db), curre
     return result
 
 @router.put("/{prescription_id}", response_model=PrescriptionOut)
-def update_prescription(prescription_id: int, prescription_update: PrescriptionUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR", "ADMIN"))):
+def update_prescription(prescription_id: int, prescription_update: PrescriptionUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
     db_prescription = prescription_service.get_prescription(db, prescription_id)
     if not db_prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")

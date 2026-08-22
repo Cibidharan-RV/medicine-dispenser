@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "username": "doctor1",
+      "password": "password123",
+      "role": "DOCTOR",
+      "first_name": "Gregory",
+      "last_name": "House",
+      "phone_number": "555-0101"
+    },
+    {
+      "username": "patient1",
+      "password": "password123",
+      "role": "PATIENT",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone_number": "555-0102"
+    },
+    {
+      "username": "caregiver1",
+      "password": "password123",
+      "role": "CAREGIVER",
+      "first_name": "Mary",
+      "last_name": "Doe",
+      "phone_number": "555-0103"
+    }
+  ],
+  "medicines": [
+    {
+      "medicine_name": "Lisinopril",
+      "strength": "10mg",
+      "dosage_form": "Tablet",
+      "manufacturer": "PharmaCorp"
+    },
+    {
+      "medicine_name": "Metformin",
+      "strength": "500mg",
+      "dosage_form": "Tablet",
+      "manufacturer": "HealthInc"
+    }
+  ],
+  "dispenser_slots": [
+    { "slot_number": 1, "capacity": 50 },
+    { "slot_number": 2, "capacity": 50 },
+    { "slot_number": 3, "capacity": 30 },
+    { "slot_number": 4, "capacity": 30 }
+  ]
+}

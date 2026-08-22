@@ -50,82 +50,91 @@ def dispense(db: Session, request: DispenseRequest):
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
-    # Check duplicate
     current_date = datetime.now().date()
-    already_dispensed = db.query(DispenseLog).filter(
-        DispenseLog.schedule_id == schedule.schedule_id,
-        func.date(DispenseLog.dispense_datetime) == current_date,
-        DispenseLog.status == 'SUCCESS'
-    ).first()
     
-    if already_dispensed:
-        raise HTTPException(status_code=400, detail="Schedule already dispensed today")
+    try:
+        # Check duplicate
+        already_dispensed = db.query(DispenseLog).filter(
+            DispenseLog.schedule_id == schedule.schedule_id,
+            func.date(DispenseLog.dispense_datetime) == current_date,
+            DispenseLog.status == 'SUCCESS'
+        ).first()
         
-    prescription_item = db.query(PrescriptionItem).filter(PrescriptionItem.prescription_item_id == schedule.prescription_item_id).first()
-    prescription = db.query(Prescription).filter(Prescription.prescription_id == prescription_item.prescription_id).first()
-    
-    # Prescription validity
-    if not (prescription.start_date <= current_date <= prescription.end_date):
-        _log_dispense(db, schedule.schedule_id, 0, "FAILED", "Prescription not valid today")
-        raise HTTPException(status_code=400, detail="Prescription not valid today")
-        
-    # Find inventory ordered by expiry date (FEFO)
-    inventories = db.query(Inventory).join(MedicineBatch, (Inventory.medicine_id == MedicineBatch.medicine_id) & (Inventory.batch_number == MedicineBatch.batch_number)).filter(
-        Inventory.medicine_id == prescription_item.medicine_id,
-        MedicineBatch.expiry_date >= current_date,
-        Inventory.quantity_available > 0
-    ).order_by(MedicineBatch.expiry_date.asc()).all()
-    
-    if not inventories:
-        _log_dispense(db, schedule.schedule_id, 0, "FAILED", "No valid medicine batch found")
-        raise HTTPException(status_code=400, detail="No valid medicine batch found")
-        
-    required_qty = schedule.quantity_to_dispense
-    quantity_dispensed = 0
-    low_stock_triggered = False
-    
-    for inv in inventories:
-        if required_qty <= 0:
-            break
+        if already_dispensed:
+            raise ValueError("Schedule already dispensed today")
             
-        slot = db.query(InventorySlot).filter(InventorySlot.inventory_id == inv.inventory_id).first()
-        if not slot:
-            continue # Skip inventory not mapped to a slot
-            
-        dispense_from_this_inv = min(inv.quantity_available, required_qty)
-        inv.quantity_available -= dispense_from_this_inv
-        required_qty -= dispense_from_this_inv
-        quantity_dispensed += dispense_from_this_inv
+        prescription_item = db.query(PrescriptionItem).filter(PrescriptionItem.prescription_item_id == schedule.prescription_item_id).first()
+        prescription = db.query(Prescription).filter(Prescription.prescription_id == prescription_item.prescription_id).first()
         
-        if inv.quantity_available < inv.minimum_stock_level:
-            low_stock_triggered = True
+        # Prescription validity
+        if not (prescription.start_date <= current_date <= prescription.end_date):
+            raise ValueError("Prescription not valid today")
             
-    if quantity_dispensed == 0:
-        _log_dispense(db, schedule.schedule_id, 0, "FAILED", "Insufficient inventory or no dispenser slot assigned")
-        raise HTTPException(status_code=400, detail="Insufficient inventory or no dispenser slot assigned")
+        # Find inventory ordered by expiry date (FEFO)
+        inventories = db.query(Inventory).join(MedicineBatch, (Inventory.medicine_id == MedicineBatch.medicine_id) & (Inventory.batch_number == MedicineBatch.batch_number)).filter(
+            Inventory.medicine_id == prescription_item.medicine_id,
+            MedicineBatch.expiry_date >= current_date,
+            Inventory.quantity_available > 0
+        ).with_for_update().order_by(MedicineBatch.expiry_date.asc()).all()
         
-    status = "SUCCESS" if required_qty == 0 else "PARTIAL"
-    reason = None if status == "SUCCESS" else "Insufficient total valid inventory"
-    
-    log = _log_dispense(db, schedule.schedule_id, quantity_dispensed, status, reason)
-    
-    db.commit()
-    return {
-        "log_id": log.dispense_id,
-        "quantity_dispensed": quantity_dispensed,
-        "status": status,
-        "low_stock_warning": low_stock_triggered
-    }
-
-def _log_dispense(db: Session, schedule_id: int, qty: int, status: str, reason: str = None):
-    log = DispenseLog(
-        schedule_id=schedule_id,
-        dispense_datetime=datetime.now(),
-        quantity_dispensed=qty,
-        status=status,
-        failure_reason=reason
-    )
-    db.add(log)
-    if status == "FAILED":
-        db.commit() # Commit failures individually if part of a bad run
-    return log
+        if not inventories:
+            raise ValueError("No valid medicine batch found")
+            
+        required_qty = schedule.quantity_to_dispense
+        quantity_dispensed = 0
+        low_stock_triggered = False
+        
+        for inv in inventories:
+            if required_qty <= 0:
+                break
+                
+            slot = db.query(InventorySlot).filter(InventorySlot.inventory_id == inv.inventory_id).first()
+            if not slot:
+                continue # Skip inventory not mapped to a slot
+                
+            dispense_from_this_inv = min(inv.quantity_available, required_qty)
+            inv.quantity_available -= dispense_from_this_inv
+            required_qty -= dispense_from_this_inv
+            quantity_dispensed += dispense_from_this_inv
+            
+            if inv.quantity_available < inv.minimum_stock_level:
+                low_stock_triggered = True
+                
+        if quantity_dispensed == 0:
+            raise ValueError("Insufficient inventory or no dispenser slot assigned")
+            
+        status = "SUCCESS" if required_qty == 0 else "PARTIAL"
+        reason = None if status == "SUCCESS" else "Insufficient total valid inventory"
+        
+        log = DispenseLog(
+            schedule_id=schedule.schedule_id,
+            dispense_datetime=datetime.now(),
+            quantity_dispensed=quantity_dispensed,
+            status=status,
+            failure_reason=reason
+        )
+        db.add(log)
+        
+        db.commit()
+        return {
+            "log_id": log.dispense_id,
+            "quantity_dispensed": quantity_dispensed,
+            "status": status,
+            "low_stock_warning": low_stock_triggered
+        }
+        
+    except ValueError as e:
+        db.rollback()
+        
+        # Log the failure in a new transaction
+        failure_log = DispenseLog(
+            schedule_id=schedule.schedule_id,
+            dispense_datetime=datetime.now(),
+            quantity_dispensed=0,
+            status="FAILED",
+            failure_reason=str(e)
+        )
+        db.add(failure_log)
+        db.commit()
+        
+        raise HTTPException(status_code=400, detail=str(e))

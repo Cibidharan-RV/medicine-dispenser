@@ -11,12 +11,12 @@ from backend.models.user import User
 router = APIRouter(prefix="/patients", tags=["patients"])
 
 @router.get("/", response_model=List[PatientOut])
-def read_patients(db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR", "CAREGIVER", "ADMIN"))):
+def read_patients(db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR", "CAREGIVER"))):
     return patient_service.get_patients(db)
 
 @router.get("/{patient_id}", response_model=PatientOut)
 def read_patient(patient_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # PATIENT can read themselves. DOCTOR/CAREGIVER/ADMIN can read anyone.
+    # PATIENT can read themselves. DOCTOR/CAREGIVER can read anyone.
     if current_user.role == "PATIENT" and current_user.userid != patient_id:
         raise HTTPException(status_code=403, detail="Not authorized to access this patient")
     

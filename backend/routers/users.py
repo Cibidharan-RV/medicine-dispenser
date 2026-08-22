@@ -11,8 +11,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    # Assuming creating users requires some admin privilege or is open for registration
-    # For now, let's keep it open or we can add a require_role("ADMIN") if we introduce an ADMIN role
+    # Open for registration or restricted as per project needs
     return user_service.create_user(db=db, user=user)
 
 @router.get("/me", response_model=UserOut)
@@ -28,6 +27,6 @@ def read_user(user_id: int, db: Session = Depends(get_db), current_user: User = 
 
 @router.put("/{user_id}", response_model=UserOut)
 def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.userid != user_id and current_user.role != "ADMIN": # Add ADMIN role check if introduced
+    if current_user.userid != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
     return user_service.update_user(db=db, user_id=user_id, user_update=user)
