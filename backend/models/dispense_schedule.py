@@ -2,7 +2,7 @@ from sqlalchemy import Column, BigInteger, Integer, Date, Time, ForeignKey, Chec
 from backend.database import Base
 
 class DispenseSchedule(Base):
-    __tablename__ = "DISPENSE_SCHEDULE"
+    __tablename__ = "dispense_schedule"
     __table_args__ = (
         CheckConstraint("quantitytodispense > 0", name="chk_schedule_quantity"),
         CheckConstraint("enddate >= startdate", name="chk_schedule_dates")

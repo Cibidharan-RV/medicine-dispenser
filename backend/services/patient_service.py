@@ -5,8 +5,28 @@ from backend.models.caregiver import CaregiverPatient
 from backend.schemas.patient import PatientUpdate
 from backend.models.user import User
 
-def get_patients(db: Session):
-    return db.query(Patient).join(User).all()
+def get_patients(db: Session, current_user: User):
+    query = db.query(Patient, User).join(User, Patient.userid == User.userid)
+    if current_user.role == "CAREGIVER":
+        query = query.join(CaregiverPatient, Patient.userid == CaregiverPatient.patient_id).filter(CaregiverPatient.caregiver_id == current_user.userid)
+    results = query.all()
+    out = []
+    for p, u in results:
+        data = {
+            "userid": p.userid,
+            "date_of_birth": p.date_of_birth,
+            "gender": p.gender,
+            "street": p.street,
+            "city": p.city,
+            "state": p.state,
+            "postal_code": p.postal_code,
+            "username": u.username,
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "role": u.role
+        }
+        out.append(data)
+    return out
 
 def get_patient(db: Session, patient_id: int):
     return db.query(Patient).filter(Patient.userid == patient_id).first()

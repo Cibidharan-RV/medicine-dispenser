@@ -12,7 +12,7 @@ from backend.models.medicine_batch import MedicineBatch
 from backend.models.dispense_log import DispenseLog
 from backend.schemas.dispense import DispenseRequest
 
-def get_due_schedules(db: Session, target_time: datetime = None):
+def get_due_schedules(db: Session, target_time: datetime = None, patient_id: int = None):
     if target_time is None:
         target_time = datetime.now()
         
@@ -23,13 +23,21 @@ def get_due_schedules(db: Session, target_time: datetime = None):
     # and the scheduled time is due (let's say within 1 hour before/after or exactly due)
     # For this basic implementation, we just return schedules that are within the active date range.
     
-    # Ideally, we would join with DispenseLog to see if it's already dispensed today.
-    # We will let the client filter out the ones already dispensed, or we can filter it here.
-    
-    active_schedules = db.query(DispenseSchedule).filter(
+    query = db.query(DispenseSchedule).filter(
         DispenseSchedule.start_date <= current_date,
         DispenseSchedule.end_date >= current_date
-    ).all()
+    )
+    
+    if patient_id is not None:
+        query = query.join(
+            PrescriptionItem, DispenseSchedule.prescription_item_id == PrescriptionItem.prescription_item_id
+        ).join(
+            Prescription, PrescriptionItem.prescription_id == Prescription.prescription_id
+        ).filter(
+            Prescription.patient_id == patient_id
+        )
+        
+    active_schedules = query.all()
     
     due_schedules = []
     for schedule in active_schedules:
@@ -138,3 +146,14 @@ def dispense(db: Session, request: DispenseRequest):
         db.commit()
         
         raise HTTPException(status_code=400, detail=str(e))
+
+def get_dispense_history(db: Session, patient_id: int):
+    return db.query(DispenseLog).join(
+        DispenseSchedule, DispenseLog.schedule_id == DispenseSchedule.schedule_id
+    ).join(
+        PrescriptionItem, DispenseSchedule.prescription_item_id == PrescriptionItem.prescription_item_id
+    ).join(
+        Prescription, PrescriptionItem.prescription_id == Prescription.prescription_id
+    ).filter(
+        Prescription.patient_id == patient_id
+    ).order_by(DispenseLog.dispense_datetime.desc()).all()

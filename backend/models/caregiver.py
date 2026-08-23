@@ -2,12 +2,12 @@ from sqlalchemy import Column, BigInteger, ForeignKey, String
 from backend.database import Base
 
 class Caregiver(Base):
-    __tablename__ = "CAREGIVER"
+    __tablename__ = "caregiver"
 
     userid = Column("userid", BigInteger, ForeignKey("USER.userid", ondelete="CASCADE"), primary_key=True)
 
 class CaregiverPatient(Base):
-    __tablename__ = "CAREGIVER_PATIENT"
+    __tablename__ = "caregiver_patient"
 
     caregiver_id = Column("caregiverid", BigInteger, ForeignKey("CAREGIVER.userid", ondelete="CASCADE"), primary_key=True)
     patient_id = Column("patientid", BigInteger, ForeignKey("PATIENT.userid", ondelete="CASCADE"), primary_key=True)

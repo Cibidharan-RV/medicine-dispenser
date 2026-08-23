@@ -2,7 +2,7 @@ from sqlalchemy import Column, BigInteger, Integer, String, ForeignKeyConstraint
 from backend.database import Base
 
 class Inventory(Base):
-    __tablename__ = "INVENTORY"
+    __tablename__ = "inventory"
     __table_args__ = (
         ForeignKeyConstraint(
             ["medicineid", "batchnumber"],

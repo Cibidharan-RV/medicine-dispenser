@@ -2,7 +2,7 @@ from sqlalchemy import Column, BigInteger, Integer, String, DateTime, ForeignKey
 from backend.database import Base
 
 class DispenseLog(Base):
-    __tablename__ = "DISPENSE_LOG"
+    __tablename__ = "dispense_log"
     __table_args__ = (
         CheckConstraint("quantitydispensed >= 0", name="chk_dispense_quantity"),
         CheckConstraint("status IN ('SUCCESS', 'FAILED', 'PARTIAL')", name="chk_dispense_status")

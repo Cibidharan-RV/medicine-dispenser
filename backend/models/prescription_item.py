@@ -2,7 +2,7 @@ from sqlalchemy import Column, BigInteger, String, ForeignKey
 from backend.database import Base
 
 class PrescriptionItem(Base):
-    __tablename__ = "PRESCRIPTION_ITEM"
+    __tablename__ = "prescription_item"
 
     prescription_item_id = Column("prescriptionitemid", BigInteger, primary_key=True, index=True)
     prescription_id = Column("prescriptionid", BigInteger, ForeignKey("PRESCRIPTION.prescriptionid", ondelete="CASCADE"), nullable=False)

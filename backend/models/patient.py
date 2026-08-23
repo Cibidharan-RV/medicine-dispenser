@@ -2,7 +2,7 @@ from sqlalchemy import Column, BigInteger, Date, String, ForeignKey
 from backend.database import Base
 
 class Patient(Base):
-    __tablename__ = "PATIENT"
+    __tablename__ = "patient"
 
     userid = Column("userid", BigInteger, ForeignKey("USER.userid", ondelete="CASCADE"), primary_key=True)
     date_of_birth = Column("dateofbirth", Date, nullable=False)

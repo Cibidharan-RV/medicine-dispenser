@@ -2,7 +2,7 @@ from sqlalchemy import Column, BigInteger, Date, ForeignKey, CheckConstraint
 from backend.database import Base
 
 class Prescription(Base):
-    __tablename__ = "PRESCRIPTION"
+    __tablename__ = "prescription"
     __table_args__ = (
         CheckConstraint("enddate >= startdate", name="chk_prescription_dates"),
     )

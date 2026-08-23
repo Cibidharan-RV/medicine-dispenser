@@ -2,7 +2,7 @@ from sqlalchemy import Column, BigInteger, Integer, CheckConstraint
 from backend.database import Base
 
 class DispenserSlot(Base):
-    __tablename__ = "DISPENSER_SLOT"
+    __tablename__ = "dispenser_slot"
     __table_args__ = (
         CheckConstraint("capacity > 0", name="chk_slot_capacity"),
     )
