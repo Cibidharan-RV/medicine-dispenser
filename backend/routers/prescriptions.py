@@ -7,18 +7,15 @@ from backend.services import prescription_service
 from backend.auth.dependencies import get_current_user, require_role
 from backend.models.user import User
 
+from backend.services import patient_service
+
 router = APIRouter(prefix="/prescriptions", tags=["prescriptions"])
 
 @router.get("/", response_model=List[PrescriptionOut])
 def read_prescriptions(patient_id: Optional[int] = None, doctor_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # PATIENT can only see their own prescriptions
     if current_user.role == "PATIENT":
         patient_id = current_user.userid
-    # DOCTOR can optionally filter by their own or patients
-    if current_user.role == "DOCTOR" and doctor_id is None:
-        doctor_id = current_user.userid
-        
-    return prescription_service.get_prescriptions(db, patient_id=patient_id, doctor_id=doctor_id)
+    return prescription_service.get_prescriptions(db, current_user, patient_id=patient_id, doctor_id=doctor_id)
 
 @router.post("/", response_model=PrescriptionOut, status_code=status.HTTP_201_CREATED)
 def create_prescription(prescription: PrescriptionCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
@@ -33,8 +30,10 @@ def read_prescription(prescription_id: int, db: Session = Depends(get_db), curre
         
     if current_user.role == "PATIENT" and db_prescription.patient_id != current_user.userid:
         raise HTTPException(status_code=403, detail="Not authorized to view this prescription")
-    if current_user.role == "DOCTOR" and db_prescription.doctor_id != current_user.userid:
-        raise HTTPException(status_code=403, detail="Not authorized to view this prescription")
+    if current_user.role == "CAREGIVER":
+        caregivers = patient_service.get_caregivers_for_patient(db, db_prescription.patient_id)
+        if not any(c.caregiver_id == current_user.userid for c in caregivers):
+            raise HTTPException(status_code=403, detail="Not authorized for this patient")
         
     # We should populate items for the output. Since we defined relationship in models, SQLAlchemy can lazy load.
     # Wait, we haven't defined SQLAlchemy relationships explicitly using relationship(), so we'll fetch them.
@@ -51,8 +50,7 @@ def update_prescription(prescription_id: int, prescription_update: PrescriptionU
     if not db_prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
         
-    if current_user.role == "DOCTOR" and db_prescription.doctor_id != current_user.userid:
-        raise HTTPException(status_code=403, detail="Not authorized to update this prescription")
+    # DOCTORS have global access to update prescriptions
         
     updated = prescription_service.update_prescription(db, prescription_id, prescription_update)
     items = prescription_service.get_prescription_items(db, prescription_id)
