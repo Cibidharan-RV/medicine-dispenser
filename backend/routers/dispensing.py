@@ -11,6 +11,7 @@ from backend.models.user import User
 from backend.models.dispense_schedule import DispenseSchedule
 from backend.models.prescription_item import PrescriptionItem
 from backend.models.prescription import Prescription
+from backend.auth.hardware import verify_hardware_api_key
 
 router = APIRouter(prefix="/dispensing", tags=["dispensing"])
 
@@ -25,12 +26,12 @@ def get_dispense_history(patient_id: int, db: Session = Depends(get_db), current
     return dispensing_service.get_dispense_history(db, patient_id)
 
 @router.get("/due", response_model=List[DispenseScheduleOut])
-def get_due_schedules(patient_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_due_schedules(patient_id: Optional[int] = None, db: Session = Depends(get_db), hw_key: str = Depends(verify_hardware_api_key)):
     # Hardware ESP32 endpoint. Allows device to pass patient_id from RFID.
     return dispensing_service.get_due_schedules(db, patient_id=patient_id)
 
 @router.post("/dispense")
-def dispense(request: DispenseRequest, db: Session = Depends(get_db)):
+def dispense(request: DispenseRequest, db: Session = Depends(get_db), hw_key: str = Depends(verify_hardware_api_key)):
     # Hardware ESP32 endpoint to log successful physical dispensing, or trigger it.
     # Note: For frontend development, a dispense simulation may be triggered by the patient.
     # Caregivers are explicitly NOT allowed to trigger dispense.
