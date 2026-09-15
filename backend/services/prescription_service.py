@@ -5,8 +5,15 @@ from backend.models.prescription_item import PrescriptionItem
 from backend.schemas.prescription import PrescriptionCreate, PrescriptionUpdate
 from datetime import date
 
-def get_prescriptions(db: Session, patient_id: int = None, doctor_id: int = None):
+from backend.models.user import User
+from backend.models.caregiver import CaregiverPatient
+
+def get_prescriptions(db: Session, current_user: User, patient_id: int = None, doctor_id: int = None):
     query = db.query(Prescription)
+    
+    if current_user.role == "CAREGIVER":
+        query = query.join(CaregiverPatient, Prescription.patient_id == CaregiverPatient.patient_id).filter(CaregiverPatient.caregiver_id == current_user.userid)
+        
     if patient_id:
         query = query.filter(Prescription.patient_id == patient_id)
     if doctor_id:

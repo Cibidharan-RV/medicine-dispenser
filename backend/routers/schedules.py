@@ -11,8 +11,7 @@ router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 @router.get("/", response_model=List[DispenseScheduleOut])
 def read_schedules(prescription_item_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # In a real app we'd check if the PATIENT owns the prescription_item_id
-    return schedule_service.get_schedules(db, prescription_item_id=prescription_item_id)
+    return schedule_service.get_schedules(db, current_user, prescription_item_id=prescription_item_id)
 
 @router.post("/", response_model=DispenseScheduleOut, status_code=status.HTTP_201_CREATED)
 def create_schedule(schedule: DispenseScheduleCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
@@ -20,11 +19,11 @@ def create_schedule(schedule: DispenseScheduleCreate, db: Session = Depends(get_
 
 @router.get("/{schedule_id}", response_model=DispenseScheduleOut)
 def read_schedule(schedule_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_schedule = schedule_service.get_schedule(db, schedule_id)
+    db_schedule = schedule_service.get_schedule(db, current_user, schedule_id)
     if not db_schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
     return db_schedule
 
 @router.put("/{schedule_id}", response_model=DispenseScheduleOut)
 def update_schedule(schedule_id: int, schedule_update: DispenseScheduleUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
-    return schedule_service.update_schedule(db, schedule_id, schedule_update)
+    return schedule_service.update_schedule(db, current_user, schedule_id, schedule_update)

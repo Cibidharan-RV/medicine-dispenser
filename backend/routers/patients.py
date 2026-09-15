@@ -16,9 +16,13 @@ def read_patients(db: Session = Depends(get_db), current_user: User = Depends(re
 
 @router.get("/{patient_id}", response_model=PatientOut)
 def read_patient(patient_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # PATIENT can read themselves. DOCTOR/CAREGIVER can read anyone.
+    # PATIENT can read themselves. DOCTOR can read anyone. CAREGIVER can read assigned.
     if current_user.role == "PATIENT" and current_user.userid != patient_id:
         raise HTTPException(status_code=403, detail="Not authorized to access this patient")
+    if current_user.role == "CAREGIVER":
+        caregivers = patient_service.get_caregivers_for_patient(db, patient_id)
+        if not any(c.caregiver_id == current_user.userid for c in caregivers):
+            raise HTTPException(status_code=403, detail="Not authorized for this patient")
     
     db_patient = patient_service.get_patient(db, patient_id)
     if not db_patient:
@@ -29,6 +33,10 @@ def read_patient(patient_id: int, db: Session = Depends(get_db), current_user: U
 def update_patient(patient_id: int, patient_update: PatientUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.role == "PATIENT" and current_user.userid != patient_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this patient")
+    if current_user.role == "CAREGIVER":
+        caregivers = patient_service.get_caregivers_for_patient(db, patient_id)
+        if not any(c.caregiver_id == current_user.userid for c in caregivers):
+            raise HTTPException(status_code=403, detail="Not authorized for this patient")
     return patient_service.update_patient(db, patient_id, patient_update)
 
 from backend.schemas.prescription import PrescriptionOut
@@ -41,6 +49,10 @@ from backend.models.dispense_schedule import DispenseSchedule
 def read_patient_caregivers(patient_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.role == "PATIENT" and current_user.userid != patient_id:
         raise HTTPException(status_code=403, detail="Not authorized")
+    if current_user.role == "CAREGIVER":
+        caregivers = patient_service.get_caregivers_for_patient(db, patient_id)
+        if not any(c.caregiver_id == current_user.userid for c in caregivers):
+            raise HTTPException(status_code=403, detail="Not authorized for this patient")
     return patient_service.get_caregivers_for_patient(db, patient_id)
 
 @router.get("/{patient_id}/prescriptions", response_model=List[PrescriptionOut])
