@@ -6,7 +6,7 @@ class Inventory(Base):
     __table_args__ = (
         ForeignKeyConstraint(
             ["medicineid", "batchnumber"],
-            ["MEDICINE_BATCH.medicineid", "MEDICINE_BATCH.batchnumber"],
+            ["medicine_batch.medicineid", "medicine_batch.batchnumber"],
             ondelete="RESTRICT"
         ),
         CheckConstraint("quantityavailable >= 0", name="chk_inventory_quantity"),

@@ -8,8 +8,8 @@ class Prescription(Base):
     )
 
     prescription_id = Column("prescriptionid", BigInteger, primary_key=True, index=True)
-    patient_id = Column("patientid", BigInteger, ForeignKey("PATIENT.userid"), nullable=False)
-    doctor_id = Column("doctorid", BigInteger, ForeignKey("DOCTOR.userid"), nullable=False)
+    patient_id = Column("patientid", BigInteger, ForeignKey("patient.userid"), nullable=False)
+    doctor_id = Column("doctorid", BigInteger, ForeignKey("doctor.userid"), nullable=False)
     prescription_date = Column("prescriptiondate", Date, nullable=False)
     start_date = Column("startdate", Date, nullable=False)
     end_date = Column("enddate", Date, nullable=False)

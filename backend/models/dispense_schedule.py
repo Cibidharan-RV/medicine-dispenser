@@ -9,7 +9,7 @@ class DispenseSchedule(Base):
     )
 
     schedule_id = Column("scheduleid", BigInteger, primary_key=True, index=True)
-    prescription_item_id = Column("prescriptionitemid", BigInteger, ForeignKey("PRESCRIPTION_ITEM.prescriptionitemid", ondelete="CASCADE"), nullable=False)
+    prescription_item_id = Column("prescriptionitemid", BigInteger, ForeignKey("prescription_item.prescriptionitemid", ondelete="CASCADE"), nullable=False)
     scheduled_time = Column("scheduledtime", Time, nullable=False)
     quantity_to_dispense = Column("quantitytodispense", Integer, nullable=False)
     start_date = Column("startdate", Date, nullable=False)

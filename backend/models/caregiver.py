@@ -9,6 +9,6 @@ class Caregiver(Base):
 class CaregiverPatient(Base):
     __tablename__ = "caregiver_patient"
 
-    caregiver_id = Column("caregiverid", BigInteger, ForeignKey("CAREGIVER.userid", ondelete="CASCADE"), primary_key=True)
-    patient_id = Column("patientid", BigInteger, ForeignKey("PATIENT.userid", ondelete="CASCADE"), primary_key=True)
+    caregiver_id = Column("caregiverid", BigInteger, ForeignKey("caregiver.userid", ondelete="CASCADE"), primary_key=True)
+    patient_id = Column("patientid", BigInteger, ForeignKey("patient.userid", ondelete="CASCADE"), primary_key=True)
     relationship_to_patient = Column("relationshiptopatient", String(100), nullable=False)

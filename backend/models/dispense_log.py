@@ -9,7 +9,7 @@ class DispenseLog(Base):
     )
 
     dispense_id = Column("dispenseid", BigInteger, primary_key=True, index=True)
-    schedule_id = Column("scheduleid", BigInteger, ForeignKey("DISPENSE_SCHEDULE.scheduleid", ondelete="CASCADE"), nullable=False)
+    schedule_id = Column("scheduleid", BigInteger, ForeignKey("dispense_schedule.scheduleid", ondelete="CASCADE"), nullable=False)
     dispense_datetime = Column("dispensedatetime", DateTime(timezone=True), nullable=False)
     quantity_dispensed = Column("quantitydispensed", Integer, nullable=False)
     status = Column("status", String(20), nullable=False)
