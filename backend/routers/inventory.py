@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from backend.database import get_db
-from backend.schemas.inventory import InventoryCreate, InventoryOut, InventoryUpdate, MedicineBatchCreate, MedicineBatchOut
+from backend.schemas.inventory import InventoryCreate, InventoryOut, InventoryUpdate, MedicineBatchCreate, MedicineBatchOut, TopUpRequest
 from backend.services import inventory_service
 from backend.auth.dependencies import get_current_user, require_role
 from backend.models.user import User
@@ -20,6 +20,10 @@ def create_inventory(item: InventoryCreate, db: Session = Depends(get_db), curre
 @router.post("/batch", response_model=MedicineBatchOut, status_code=status.HTTP_201_CREATED)
 def create_batch(batch: MedicineBatchCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
     return inventory_service.create_medicine_batch(db, batch)
+
+@router.post("/topup", response_model=InventoryOut, status_code=status.HTTP_201_CREATED)
+def topup_inventory(topup: TopUpRequest, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
+    return inventory_service.process_topup(db, topup)
 
 @router.get("/{inventory_id}", response_model=InventoryOut)
 def read_inventory_item(inventory_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

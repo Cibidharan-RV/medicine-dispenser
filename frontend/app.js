@@ -194,9 +194,17 @@ const doctorUI = {
             const inventoryByMed = {};
             inventory.forEach(inv => {
                 if (!inventoryByMed[inv.medicine_id]) {
-                    inventoryByMed[inv.medicine_id] = { total: 0, minStock: inv.minimum_stock_level };
+                    inventoryByMed[inv.medicine_id] = { total: 0, minStock: inv.minimum_stock_level, expiries: new Set() };
                 }
                 inventoryByMed[inv.medicine_id].total += inv.quantity_available;
+                if (inv.quantity_available > 0) {
+                    if (inv.expiry_date) {
+                        const date = new Date(inv.expiry_date);
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const year = date.getFullYear();
+                        inventoryByMed[inv.medicine_id].expiries.add(`${month}/${year}`);
+                    }
+                }
             });
 
             const tbody = document.querySelector('#medicines-table tbody');
@@ -210,14 +218,20 @@ const doctorUI = {
                 else if (invData.total <= invData.minStock) stockStatus = '<span class="badge badge-warning">Low Stock</span>';
                 else stockStatus = '<span class="badge badge-success">In Stock</span>';
 
+                const expiryStr = invData.expiries && invData.expiries.size > 0 ? Array.from(invData.expiries).join(', ') : '-';
+                
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${m.medicine_id}</td>
                     <td style="font-weight: 500;">${m.medicine_name}</td>
                     <td>${m.strength || '-'}</td>
                     <td>${m.dosage_form || '-'}</td>
+                    <td>${expiryStr}</td>
                     <td>${invData.total}</td>
                     <td>${stockStatus}</td>
+                    <td>
+                        <button class="button-secondary" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" onclick="doctorUI.showTopupModal(${m.medicine_id}, '${m.medicine_name}', ${invData.minStock})">Top Up</button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
                 
@@ -236,6 +250,15 @@ const doctorUI = {
         document.getElementById('create-prescription-modal').classList.remove('hidden');
         pendingPrescriptionItems = [];
         this.renderPendingItems();
+    },
+    showTopupModal(medicineId, medicineName, currentMinStock) {
+        document.getElementById('tm-medicine-id').value = medicineId;
+        document.getElementById('tm-name').value = medicineName;
+        document.getElementById('tm-expiry-month').value = '';
+        document.getElementById('tm-expiry-year').value = '';
+        document.getElementById('tm-quantity').value = '';
+        document.getElementById('tm-min-stock').value = currentMinStock;
+        document.getElementById('topup-medicine-modal').classList.remove('hidden');
     },
     renderPendingItems() {
         const container = document.getElementById('cpr-items-container');
@@ -483,8 +506,9 @@ document.getElementById('create-medicine-form').addEventListener('submit', async
     };
     
     const inventoryPayload = {
-        batch_number: document.getElementById('cm-batch').value,
-        quantity_available: parseInt(document.getElementById('cm-quantity').value, 10),
+        expiry_month: parseInt(document.getElementById('cm-expiry-month').value, 10),
+        expiry_year: parseInt(document.getElementById('cm-expiry-year').value, 10),
+        quantity_to_add: parseInt(document.getElementById('cm-quantity').value, 10),
         minimum_stock_level: parseInt(document.getElementById('cm-min-stock').value, 10)
     };
     
@@ -497,7 +521,7 @@ document.getElementById('create-medicine-form').addEventListener('submit', async
         
         inventoryPayload.medicine_id = newMed.medicine_id;
         
-        await apiFetch('/inventory/', {
+        await apiFetch('/inventory/topup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(inventoryPayload)
@@ -509,6 +533,30 @@ document.getElementById('create-medicine-form').addEventListener('submit', async
         doctorUI.loadMedicines();
     } catch (err) {
         alert('Failed to add medicine: ' + err.message);
+    }
+});
+
+document.getElementById('topup-medicine-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        medicine_id: parseInt(document.getElementById('tm-medicine-id').value, 10),
+        expiry_month: parseInt(document.getElementById('tm-expiry-month').value, 10),
+        expiry_year: parseInt(document.getElementById('tm-expiry-year').value, 10),
+        quantity_to_add: parseInt(document.getElementById('tm-quantity').value, 10),
+        minimum_stock_level: parseInt(document.getElementById('tm-min-stock').value, 10)
+    };
+    try {
+        await apiFetch('/inventory/topup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        alert('Inventory topped up successfully!');
+        document.getElementById('topup-medicine-modal').classList.add('hidden');
+        document.getElementById('topup-medicine-form').reset();
+        doctorUI.loadMedicines();
+    } catch (err) {
+        alert('Failed to top up inventory: ' + err.message);
     }
 });
 

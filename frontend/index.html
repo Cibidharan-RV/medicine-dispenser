@@ -71,7 +71,7 @@
                     </div>
                     <div class="table-container">
                         <table id="medicines-table">
-                            <thead><tr><th>ID</th><th>Name</th><th>Strength</th><th>Form</th><th>Stock</th><th>Status</th></tr></thead>
+                            <thead><tr><th>ID</th><th>Name</th><th>Strength</th><th>Form</th><th>Expiry</th><th>Stock</th><th>Status</th><th>Action</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -181,12 +181,68 @@
                         <div class="form-group"><label>Dosage Form</label><input type="text" id="cm-form" required></div>
                         <div class="form-group"><label>Manufacturer</label><input type="text" id="cm-manufacturer"></div>
                         <h4 style="margin-top: 1rem; margin-bottom: 0.5rem; color: var(--primary-color);">Initial Inventory</h4>
-                        <div class="form-group"><label>Batch Number</label><input type="text" id="cm-batch" required></div>
                         <div class="form-group" style="display: flex; gap: 1rem;">
-                            <div style="flex: 1;"><label>Initial Quantity</label><input type="number" id="cm-quantity" required min="0"></div>
-                            <div style="flex: 1;"><label>Min Stock Alert</label><input type="number" id="cm-min-stock" required min="0"></div>
+                            <div style="flex: 1;"><label>Expiry Month</label>
+                                <select id="cm-expiry-month" required>
+                                    <option value="" disabled selected>Select Month</option>
+                                    <option value="1">01 - Jan</option><option value="2">02 - Feb</option><option value="3">03 - Mar</option>
+                                    <option value="4">04 - Apr</option><option value="5">05 - May</option><option value="6">06 - Jun</option>
+                                    <option value="7">07 - Jul</option><option value="8">08 - Aug</option><option value="9">09 - Sep</option>
+                                    <option value="10">10 - Oct</option><option value="11">11 - Nov</option><option value="12">12 - Dec</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;"><label>Expiry Year</label>
+                                <select id="cm-expiry-year" required>
+                                    <option value="" disabled selected>Select Year</option>
+                                    <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+                                    <option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                                    <option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option>
+                                    <option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 1rem;">
+                            <div style="flex: 1;"><label>Initial Quantity</label><input type="number" id="cm-quantity" required min="1"></div>
+                            <div style="flex: 1;"><label>Min Stock Alert</label><input type="number" id="cm-min-stock" required min="0" value="10"></div>
                         </div>
                         <button type="submit" style="width: 100%; margin-top: 1rem;">Add Medicine</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Top Up Medicine Modal -->
+            <div id="topup-medicine-modal" class="modal hidden">
+                <div class="modal-content">
+                    <span class="close" onclick="document.getElementById('topup-medicine-modal').classList.add('hidden')">&times;</span>
+                    <h3 style="margin-top: 0; color: var(--primary-color);">Top Up Inventory</h3>
+                    <form id="topup-medicine-form">
+                        <input type="hidden" id="tm-medicine-id">
+                        <div class="form-group"><label>Medicine Name</label><input type="text" id="tm-name" disabled style="background: #f1f5f9; cursor: not-allowed;"></div>
+                        <div class="form-group" style="display: flex; gap: 1rem;">
+                            <div style="flex: 1;"><label>Expiry Month</label>
+                                <select id="tm-expiry-month" required>
+                                    <option value="" disabled selected>Select Month</option>
+                                    <option value="1">01 - Jan</option><option value="2">02 - Feb</option><option value="3">03 - Mar</option>
+                                    <option value="4">04 - Apr</option><option value="5">05 - May</option><option value="6">06 - Jun</option>
+                                    <option value="7">07 - Jul</option><option value="8">08 - Aug</option><option value="9">09 - Sep</option>
+                                    <option value="10">10 - Oct</option><option value="11">11 - Nov</option><option value="12">12 - Dec</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;"><label>Expiry Year</label>
+                                <select id="tm-expiry-year" required>
+                                    <option value="" disabled selected>Select Year</option>
+                                    <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+                                    <option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option>
+                                    <option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option>
+                                    <option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 1rem;">
+                            <div style="flex: 1;"><label>Quantity to Add</label><input type="number" id="tm-quantity" required min="1"></div>
+                            <div style="flex: 1;"><label>Min Stock Alert</label><input type="number" id="tm-min-stock" required min="0" value="10"></div>
+                        </div>
+                        <button type="submit" style="width: 100%; margin-top: 1rem;">Top Up Stock</button>
                     </form>
                 </div>
             </div>

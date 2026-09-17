@@ -29,6 +29,14 @@ class InventoryUpdate(BaseModel):
 
 class InventoryOut(InventoryBase):
     inventory_id: int
+    expiry_date: Optional[date] = None
 
     class Config:
         from_attributes = True
+
+class TopUpRequest(BaseModel):
+    medicine_id: int
+    expiry_month: int = Field(..., ge=1, le=12)
+    expiry_year: int = Field(..., ge=2000, le=2100)
+    quantity_to_add: int = Field(..., gt=0)
+    minimum_stock_level: int = Field(10, ge=0)
