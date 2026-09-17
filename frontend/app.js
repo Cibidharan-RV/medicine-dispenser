@@ -152,6 +152,31 @@ function showDashboard() {
 
 // --- DOCTOR UI ---
 const doctorUI = {
+    filterPatients() {
+        const term = document.getElementById('search-patients').value.toLowerCase();
+        const rows = document.querySelectorAll('#patients-table tbody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(term) ? '' : 'none';
+        });
+    },
+    filterMedicines() {
+        const term = document.getElementById('search-medicines').value.toLowerCase();
+        const rows = document.querySelectorAll('#medicines-table tbody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(term) ? '' : 'none';
+        });
+    },
+    filterSelect(inputId, selectId) {
+        const term = document.getElementById(inputId).value.toLowerCase();
+        const select = document.getElementById(selectId);
+        Array.from(select.options).forEach(opt => {
+            if (opt.value === "") return;
+            const text = opt.textContent.toLowerCase();
+            opt.style.display = text.includes(term) ? '' : 'none';
+        });
+    },
     async loadPatients() {
         try {
             const users = await apiFetch('/patients/');
@@ -166,7 +191,6 @@ const doctorUI = {
                     <td>${u.userid || u.id || '-'}</td>
                     <td>${u.username || '-'}</td>
                     <td>${u.first_name || '-'} ${u.last_name || '-'}</td>
-                    <td><span class="badge badge-primary">${u.role || '-'}</span></td>
                 `;
                 tr.style.cursor = 'pointer';
                 tr.onclick = () => this.viewPatient(u.userid || u.id, `${u.first_name || u.username} ${u.last_name || ''}`);

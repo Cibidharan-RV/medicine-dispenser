@@ -50,15 +50,18 @@
                 </div>
             </div>
             
-            <div class="dashboard-grid">
+            <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
                 <div id="doctor-patients-view" class="dashboard-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3 style="margin: 0;">System Patients</h3>
-                        <button onclick="document.getElementById('create-patient-modal').classList.remove('hidden')">+ Create Patient</button>
+                        <div style="display: flex; gap: 1rem;">
+                            <input type="text" id="search-patients" placeholder="Search Patients..." onkeyup="doctorUI.filterPatients()" style="padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <button onclick="document.getElementById('create-patient-modal').classList.remove('hidden')">+ Create Patient</button>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table id="patients-table">
-                            <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Role</th></tr></thead>
+                            <thead><tr><th>ID</th><th>Username</th><th>Name</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -67,7 +70,10 @@
                 <div id="doctor-medicines-view" class="dashboard-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3 style="margin: 0;">Available Medicines</h3>
-                        <button onclick="document.getElementById('create-medicine-modal').classList.remove('hidden')">+ Add Medicine</button>
+                        <div style="display: flex; gap: 1rem;">
+                            <input type="text" id="search-medicines" placeholder="Search Medicines..." onkeyup="doctorUI.filterMedicines()" style="padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <button onclick="document.getElementById('create-medicine-modal').classList.remove('hidden')">+ Add Medicine</button>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table id="medicines-table">
@@ -131,6 +137,7 @@
                     <form id="create-prescription-form">
                         <h3 style="margin-top: 0; color: var(--primary-color);">Assign Prescription</h3>
                         <div class="form-group"><label>Patient</label>
+                            <input type="text" id="search-cpr-patient" placeholder="Search Patient by Username..." onkeyup="doctorUI.filterSelect('search-cpr-patient', 'cpr-patient-id')" style="margin-bottom: 0.5rem; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; width: 100%;">
                             <!-- We use a select dropdown because doctorUI.loadPatients can populate it -->
                             <select id="cpr-patient-id" required>
                                 <option value="" disabled selected>Select Patient</option>
@@ -143,11 +150,15 @@
                         </div>
 
                         <div style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1rem;">
-                            <h4 style="margin-top: 0; color: var(--primary-color);">Add Medicine</h4>
-                            <div class="form-group"><label>Medicine</label>
-                                <select id="cpr-medicine-id">
-                                    <option value="" disabled selected>Select Medicine</option>
-                                </select>
+                            <h4 style="margin-top: 1rem; margin-bottom: 0.5rem; color: var(--primary-color);">Prescription Items</h4>
+                            <div class="card" style="margin-bottom: 1rem; background: var(--bg-surface-alt); padding: 1rem;">
+                                <div class="form-group">
+                                    <label>Select Medicine</label>
+                                    <input type="text" id="search-cpr-medicine" placeholder="Search Medicine..." onkeyup="doctorUI.filterSelect('search-cpr-medicine', 'cpr-medicine-id')" style="margin-bottom: 0.5rem; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; width: 100%;">
+                                    <select id="cpr-medicine-id">
+                                        <option value="" disabled selected>Loading medicines...</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group"><label>Dosage</label><input type="text" id="cpr-dosage" placeholder="e.g. 500mg"></div>
                             
