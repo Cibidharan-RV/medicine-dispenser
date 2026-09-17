@@ -12,6 +12,7 @@ from backend.models.medicine_batch import MedicineBatch
 from backend.models.inventory import Inventory
 from backend.models.dispenser_slot import DispenserSlot
 from backend.models.inventory_slot import InventorySlot
+from backend.models.nfc_card import NfcCard
 from backend.auth.security import get_password_hash
 
 def setup_dispensing_data(db_session):
@@ -24,6 +25,10 @@ def setup_dispensing_data(db_session):
     doc = Doctor(userid=doctor_user.userid, medical_registration_number="MRN123", specialization="General")
     pat = Patient(userid=patient_user.userid, date_of_birth=date(1990, 1, 1))
     db_session.add_all([doc, pat])
+    db_session.commit()
+
+    nfc = NfcCard(userid=patient_user.userid, nfc_uid="test-nfc-uid")
+    db_session.add(nfc)
     db_session.commit()
 
     # Create medicine
@@ -74,14 +79,14 @@ def test_dispensing_logic(client: TestClient, db_session):
     data = setup_dispensing_data(db_session)
     
     # View due schedules
-    res = client.get("/api/v1/dispensing/due", headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
+    res = client.get("/api/v1/dispensing/due?nfc_uid=test-nfc-uid", headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
     assert res.status_code == 200
     due_schedules = res.json()
     assert len(due_schedules) > 0
     assert any(s["schedule_id"] == data["schedule_id"] for s in due_schedules)
     
     # Dispense (First time success)
-    res = client.post("/api/v1/dispensing/dispense", json={"schedule_id": data["schedule_id"]}, headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
+    res = client.post("/api/v1/dispensing/dispense", json={"schedule_id": data["schedule_id"], "nfc_uid": "test-nfc-uid"}, headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
     assert res.status_code == 200
     dispense_result = res.json()
     assert dispense_result["status"] == "SUCCESS"
@@ -93,7 +98,7 @@ def test_dispensing_logic(client: TestClient, db_session):
     assert inv.quantity_available == 9
     
     # Attempt duplicate dispense (Should fail)
-    res_dup = client.post("/api/v1/dispensing/dispense", json={"schedule_id": data["schedule_id"]}, headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
+    res_dup = client.post("/api/v1/dispensing/dispense", json={"schedule_id": data["schedule_id"], "nfc_uid": "test-nfc-uid"}, headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
     assert res_dup.status_code == 400
     assert "already dispensed" in res_dup.json()["detail"].lower()
 
@@ -105,6 +110,6 @@ def test_minimum_stock_detection(client: TestClient, db_session):
     inv.quantity_available = 5 # Minimum is 5. Dispensing 1 will bring it to 4.
     db_session.commit()
     
-    res = client.post("/api/v1/dispensing/dispense", json={"schedule_id": data["schedule_id"]}, headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
+    res = client.post("/api/v1/dispensing/dispense", json={"schedule_id": data["schedule_id"], "nfc_uid": "test-nfc-uid"}, headers={"X-Hardware-Api-Key": "esp32-default-secret-key"})
     assert res.status_code == 200
     assert res.json()["low_stock_warning"] is True
