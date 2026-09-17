@@ -185,30 +185,51 @@ const doctorUI = {
     },
     async loadMedicines() {
         try {
-            const meds = await apiFetch('/medicines/');
+            const [meds, inventory] = await Promise.all([
+                apiFetch('/medicines/'),
+                apiFetch('/inventory/')
+            ]);
+            
+            // Aggregate inventory by medicine_id
+            const inventoryByMed = {};
+            inventory.forEach(inv => {
+                if (!inventoryByMed[inv.medicine_id]) {
+                    inventoryByMed[inv.medicine_id] = { total: 0, minStock: inv.minimum_stock_level };
+                }
+                inventoryByMed[inv.medicine_id].total += inv.quantity_available;
+            });
+
             const tbody = document.querySelector('#medicines-table tbody');
             const select = document.getElementById('cpr-medicine-id');
             tbody.innerHTML = '';
             if (select) select.innerHTML = '<option value="" disabled selected>Select Medicine</option>';
             meds.forEach(m => {
+                const invData = inventoryByMed[m.medicine_id] || { total: 0, minStock: 0 };
+                let stockStatus = '';
+                if (invData.total === 0) stockStatus = '<span class="badge badge-danger">Out of Stock</span>';
+                else if (invData.total <= invData.minStock) stockStatus = '<span class="badge badge-warning">Low Stock</span>';
+                else stockStatus = '<span class="badge badge-success">In Stock</span>';
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${m.medicine_id}</td>
                     <td style="font-weight: 500;">${m.medicine_name}</td>
                     <td>${m.strength || '-'}</td>
                     <td>${m.dosage_form || '-'}</td>
+                    <td>${invData.total}</td>
+                    <td>${stockStatus}</td>
                 `;
                 tbody.appendChild(tr);
                 
                 if (select) {
                     const opt = document.createElement('option');
                     opt.value = m.medicine_id;
-                    opt.textContent = `${m.medicine_name} (${m.strength})`;
+                    opt.textContent = `${m.medicine_name} (${m.strength}) - Stock: ${invData.total}`;
                     select.appendChild(opt);
                 }
             });
         } catch (err) {
-            alert('Failed to load medicines: ' + err.message);
+            console.error('Failed to load medicines: ', err);
         }
     },
     showCreatePrescriptionModal() {
