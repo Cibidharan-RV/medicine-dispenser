@@ -481,13 +481,29 @@ document.getElementById('create-medicine-form').addEventListener('submit', async
         dosage_form: document.getElementById('cm-form').value,
         manufacturer: document.getElementById('cm-manufacturer').value
     };
+    
+    const inventoryPayload = {
+        batch_number: document.getElementById('cm-batch').value,
+        quantity_available: parseInt(document.getElementById('cm-quantity').value, 10),
+        minimum_stock_level: parseInt(document.getElementById('cm-min-stock').value, 10)
+    };
+    
     try {
-        await apiFetch('/medicines/', {
+        const newMed = await apiFetch('/medicines/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        alert('Medicine added successfully!');
+        
+        inventoryPayload.medicine_id = newMed.medicine_id;
+        
+        await apiFetch('/inventory/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(inventoryPayload)
+        });
+        
+        alert('Medicine and initial inventory added successfully!');
         document.getElementById('create-medicine-modal').classList.add('hidden');
         document.getElementById('create-medicine-form').reset();
         doctorUI.loadMedicines();
