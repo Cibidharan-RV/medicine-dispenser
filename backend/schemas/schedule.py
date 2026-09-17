@@ -19,6 +19,7 @@ class DispenseScheduleUpdate(BaseModel):
 
 class DispenseScheduleOut(DispenseScheduleBase):
     schedule_id: int
+    medicine_name: Optional[str] = None
 
     class Config:
         from_attributes = True

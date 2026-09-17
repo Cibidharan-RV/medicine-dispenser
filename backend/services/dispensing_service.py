@@ -10,6 +10,7 @@ from backend.models.inventory_slot import InventorySlot
 from backend.models.dispenser_slot import DispenserSlot
 from backend.models.medicine_batch import MedicineBatch
 from backend.models.dispense_log import DispenseLog
+from backend.models.medicine import Medicine
 from backend.schemas.dispense import DispenseRequest
 
 def get_due_schedules(db: Session, target_time: datetime = None, patient_id: int = None):
@@ -49,6 +50,13 @@ def get_due_schedules(db: Session, target_time: datetime = None, patient_id: int
         ).first()
         
         if not already_dispensed:
+            # Attach medicine_name for frontend convenience
+            med = db.query(Medicine).join(
+                PrescriptionItem, PrescriptionItem.medicine_id == Medicine.medicine_id
+            ).filter(PrescriptionItem.prescription_item_id == schedule.prescription_item_id).first()
+            
+            if med:
+                schedule.medicine_name = med.medicine_name
             due_schedules.append(schedule)
             
     return due_schedules
