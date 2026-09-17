@@ -24,3 +24,6 @@ class UserOut(UserBase):
 
     class Config:
         from_attributes = True
+
+class NfcCardCreate(BaseModel):
+    nfc_uid: str = Field(..., max_length=255)

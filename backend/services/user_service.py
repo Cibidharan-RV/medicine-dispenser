@@ -36,7 +36,11 @@ def create_user(db: Session, user: UserCreate):
         # Additional patient info will be added via patient endpoints
         # Using dummy data to satisfy constraints for now, real data should be added properly
         from datetime import date
+        from backend.models.nfc_card import NfcCard
         db.add(Patient(userid=new_user.userid, date_of_birth=date(1900, 1, 1)))
+        db.flush()
+        default_nfc = f"mock-card-{new_user.username}"
+        db.add(NfcCard(nfc_uid=default_nfc, userid=new_user.userid, is_active=True))
     elif user.role == "DOCTOR":
         db.add(Doctor(userid=new_user.userid, medical_registration_number=f"TBD-{new_user.userid}", specialization="TBD"))
     elif user.role == "CAREGIVER":

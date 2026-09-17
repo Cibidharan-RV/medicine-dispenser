@@ -20,3 +20,4 @@ class DispenseLogOut(DispenseLogBase):
 
 class DispenseRequest(BaseModel):
     schedule_id: int
+    nfc_uid: str

@@ -22,5 +22,5 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Incorrect username or password",
         )
     # The role claim is added for frontend convenience, but backend uses db user
-    access_token = create_access_token(data={"sub": user.username, "role": user.role})
+    access_token = create_access_token(data={"sub": user.username, "role": user.role, "userid": user.userid})
     return Token(access_token=access_token)
