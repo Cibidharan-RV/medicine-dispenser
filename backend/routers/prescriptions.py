@@ -15,12 +15,22 @@ router = APIRouter(prefix="/prescriptions", tags=["prescriptions"])
 def read_prescriptions(patient_id: Optional[int] = None, doctor_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.role == "PATIENT":
         patient_id = current_user.userid
-    return prescription_service.get_prescriptions(db, current_user, patient_id=patient_id, doctor_id=doctor_id)
+    prescriptions = prescription_service.get_prescriptions(db, current_user, patient_id=patient_id, doctor_id=doctor_id)
+    result = []
+    for p in prescriptions:
+        p_out = PrescriptionOut.model_validate(p)
+        p_out.items = prescription_service.get_prescription_items(db, p.prescription_id)
+        result.append(p_out)
+    return result
 
 @router.post("/", response_model=PrescriptionOut, status_code=status.HTTP_201_CREATED)
 def create_prescription(prescription: PrescriptionCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
     doctor_id = current_user.userid
-    return prescription_service.create_prescription(db, prescription, doctor_id=doctor_id)
+    new_prescription = prescription_service.create_prescription(db, prescription, doctor_id=doctor_id)
+    items = prescription_service.get_prescription_items(db, new_prescription.prescription_id)
+    result = PrescriptionOut.model_validate(new_prescription)
+    result.items = items
+    return result
 
 @router.get("/{prescription_id}", response_model=PrescriptionOut)
 def read_prescription(prescription_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -57,3 +67,13 @@ def update_prescription(prescription_id: int, prescription_update: PrescriptionU
     result = PrescriptionOut.model_validate(updated)
     result.items = items
     return result
+
+@router.delete("/{prescription_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_prescription(prescription_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
+    prescription_service.delete_prescription(db, prescription_id)
+    return
+
+@router.delete("/items/{prescription_item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_prescription_item(prescription_item_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
+    prescription_service.delete_prescription_item(db, prescription_item_id)
+    return

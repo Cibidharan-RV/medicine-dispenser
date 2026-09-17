@@ -46,14 +46,16 @@
                 <h2>Doctor Dashboard</h2>
                 <div class="actions">
                     <button onclick="doctorUI.loadPatients()">↻ Refresh Patients</button>
-                    <button onclick="document.getElementById('create-patient-modal').classList.remove('hidden')">+ Create Patient</button>
                     <button onclick="doctorUI.showCreatePrescriptionModal()">+ Assign Prescription</button>
                 </div>
             </div>
             
             <div class="dashboard-grid">
                 <div id="doctor-patients-view" class="dashboard-section">
-                    <h3>System Patients</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;">System Patients</h3>
+                        <button onclick="document.getElementById('create-patient-modal').classList.remove('hidden')">+ Create Patient</button>
+                    </div>
                     <div class="table-container">
                         <table id="patients-table">
                             <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Role</th></tr></thead>
@@ -63,8 +65,8 @@
                 </div>
 
                 <div id="doctor-medicines-view" class="dashboard-section">
-                    <h3>Available Medicines</h3>
-                    <div class="actions" style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;">Available Medicines</h3>
                         <button onclick="document.getElementById('create-medicine-modal').classList.remove('hidden')">+ Add Medicine</button>
                     </div>
                     <div class="table-container">
@@ -72,6 +74,37 @@
                             <thead><tr><th>ID</th><th>Name</th><th>Strength</th><th>Form</th></tr></thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Doctor Selected Patient View -->
+            <div id="doctor-selected-patient-view" class="hidden fade-in" style="margin-top: 3rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+                    <h3 id="doctor-selected-patient-title" style="color: var(--primary-color); margin: 0;"></h3>
+                    <button class="outline" onclick="doctorUI.closePatientView()">← Back to Patients</button>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="dashboard-section" style="grid-column: 1 / -1;">
+                        <h3>Active Prescriptions</h3>
+                        <div id="doctor-patient-prescriptions-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4>Medication Schedule</h4>
+                        <div class="card" style="padding: 1rem;">
+                            <ul id="doctor-patient-schedule" class="schedule-list"></ul>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4>Dispense History</h4>
+                        <div class="card">
+                            <ul id="doctor-patient-history" class="timeline"></ul>
+                        </div>
                     </div>
                 </div>
             </div>

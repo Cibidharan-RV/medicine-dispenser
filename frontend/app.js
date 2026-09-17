@@ -168,6 +168,8 @@ const doctorUI = {
                     <td>${u.first_name || '-'} ${u.last_name || '-'}</td>
                     <td><span class="badge badge-primary">${u.role || '-'}</span></td>
                 `;
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => this.viewPatient(u.userid || u.id, `${u.first_name || u.username} ${u.last_name || ''}`);
                 tbody.appendChild(tr);
                 
                 if (select) {
@@ -187,21 +189,23 @@ const doctorUI = {
             const tbody = document.querySelector('#medicines-table tbody');
             const select = document.getElementById('cpr-medicine-id');
             tbody.innerHTML = '';
-            select.innerHTML = '<option value="" disabled selected>Select Medicine</option>';
+            if (select) select.innerHTML = '<option value="" disabled selected>Select Medicine</option>';
             meds.forEach(m => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${m.medicine_id}</td>
-                    <td>${m.medicine_name}</td>
-                    <td>${m.strength}</td>
-                    <td>${m.dosage_form}</td>
+                    <td style="font-weight: 500;">${m.medicine_name}</td>
+                    <td>${m.strength || '-'}</td>
+                    <td>${m.dosage_form || '-'}</td>
                 `;
                 tbody.appendChild(tr);
                 
-                const opt = document.createElement('option');
-                opt.value = m.medicine_id;
-                opt.textContent = `${m.medicine_name} (${m.strength})`;
-                select.appendChild(opt);
+                if (select) {
+                    const opt = document.createElement('option');
+                    opt.value = m.medicine_id;
+                    opt.textContent = `${m.medicine_name} (${m.strength})`;
+                    select.appendChild(opt);
+                }
             });
         } catch (err) {
             alert('Failed to load medicines: ' + err.message);
@@ -237,6 +241,190 @@ const doctorUI = {
     removePendingItem(index) {
         pendingPrescriptionItems.splice(index, 1);
         this.renderPendingItems();
+    },
+
+    closePatientView() {
+        document.getElementById('doctor-selected-patient-view').classList.add('hidden');
+        document.getElementById('doctor-patients-view').classList.remove('hidden');
+        document.getElementById('doctor-medicines-view').classList.remove('hidden');
+        document.querySelector('.dashboard-grid').style.display = 'grid'; // restore layout if needed
+    },
+
+    async viewPatient(patientId, patientName) {
+        document.getElementById('doctor-patients-view').classList.add('hidden');
+        document.getElementById('doctor-medicines-view').classList.add('hidden');
+        document.getElementById('doctor-selected-patient-view').classList.remove('hidden');
+        
+        document.getElementById('doctor-selected-patient-title').textContent = `Patient: ${patientName}`;
+        
+        const prescriptionsDiv = document.getElementById('doctor-patient-prescriptions-list');
+        const scheduleUl = document.getElementById('doctor-patient-schedule');
+        const historyUl = document.getElementById('doctor-patient-history');
+        
+        prescriptionsDiv.innerHTML = 'Loading...';
+        scheduleUl.innerHTML = 'Loading...';
+        historyUl.innerHTML = 'Loading...';
+        
+        let prescriptionItemMap = {};
+        let scheduleMap = {};
+
+        // Load Prescriptions
+        try {
+            const prescriptions = await apiFetch(`/prescriptions/?patient_id=${patientId}`);
+            prescriptionsDiv.innerHTML = '';
+            
+            if (prescriptions.length === 0) {
+                prescriptionsDiv.innerHTML = '<div class="prescription-sig">No active prescriptions.</div>';
+            }
+
+            prescriptions.forEach(p => {
+                let itemsHtml = '';
+                if (p.items && p.items.length > 0) {
+                    p.items.forEach(item => {
+                        prescriptionItemMap[item.prescription_item_id] = {
+                            prescription_id: p.prescription_id,
+                            medicine_id: item.medicine_id,
+                            dosage: item.dosage,
+                            frequency: item.frequency
+                        };
+                        const med = medicineMap[item.medicine_id];
+                        const medName = med ? `${med.medicine_name} (${med.strength})` : `Unknown Med (ID: ${item.medicine_id})`;
+                        itemsHtml += `
+                            <div class="prescription-item" style="border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div class="prescription-med">${medName}</div>
+                                    <div class="prescription-sig">Take ${item.dosage}, ${item.frequency} for ${item.duration}</div>
+                                </div>
+                                <button class="button-danger" onclick="doctorUI.deletePrescriptionItem(${item.prescription_item_id}, ${patientId}, '${patientName}')" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger); padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;">Delete Item</button>
+                            </div>
+                        `;
+                    });
+                } else {
+                    itemsHtml = '<div class="prescription-sig">No items attached.</div>';
+                }
+
+                const div = document.createElement('div');
+                div.className = 'prescription-card fade-in';
+                div.innerHTML = `
+                    <div class="prescription-header">
+                        <div>
+                            <span style="font-weight: bold; margin-right: 1rem;">Rx #${p.prescription_id}</span>
+                            <span style="font-size: 0.9rem;">${p.start_date} to ${p.end_date}</span>
+                        </div>
+                        <button class="button-danger" onclick="doctorUI.deletePrescription(${p.prescription_id}, ${patientId}, '${patientName}')" style="background: var(--danger); color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;">Delete Rx</button>
+                    </div>
+                    ${itemsHtml}
+                `;
+                prescriptionsDiv.appendChild(div);
+            });
+        } catch (e) {
+            prescriptionsDiv.innerHTML = `<div class="error">Error loading prescriptions: ${e.message}</div>`;
+        }
+
+        // Load Schedules
+        try {
+            const schedules = await apiFetch(`/schedules/?patient_id=${patientId}`);
+            scheduleUl.innerHTML = '';
+            if (schedules.length === 0) {
+                scheduleUl.innerHTML = '<li class="schedule-item">No upcoming doses.</li>';
+            }
+
+            schedules.forEach(s => {
+                scheduleMap[s.schedule_id] = s;
+                const li = document.createElement('li');
+                li.className = 'schedule-item fade-in';
+                
+                let medName = 'Unknown Medicine';
+                let dosageInfo = '';
+                
+                const pItem = prescriptionItemMap[s.prescription_item_id];
+                if (pItem) {
+                    const med = medicineMap[pItem.medicine_id];
+                    if (med) medName = `${med.medicine_name} (${med.strength})`;
+                    dosageInfo = pItem.dosage;
+                }
+
+                li.innerHTML = `
+                    <div class="schedule-time">${s.scheduled_time}</div>
+                    <div class="schedule-details">
+                        <div style="font-weight: 600;">${medName} - ${dosageInfo}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Qty: ${s.quantity_to_dispense} (Schedule #${s.schedule_id})</div>
+                    </div>
+                `;
+                scheduleUl.appendChild(li);
+            });
+        } catch (e) {
+            scheduleUl.innerHTML = `<li class="schedule-item error">Error loading schedules: ${e.message}</li>`;
+        }
+
+        // Load History
+        try {
+            const history = await apiFetch(`/dispensing/history/${patientId}`);
+            historyUl.innerHTML = '';
+            
+            if (history.length === 0) {
+                historyUl.innerHTML = '<li class="timeline-item"><div class="timeline-content">No history found.</div></li>';
+            }
+
+            history.forEach(l => {
+                const li = document.createElement('li');
+                
+                const s = scheduleMap[l.schedule_id];
+                let medName = 'Unknown Medicine';
+                if (s) {
+                    const pItem = prescriptionItemMap[s.prescription_item_id];
+                    if (pItem && medicineMap[pItem.medicine_id]) {
+                        medName = medicineMap[pItem.medicine_id].medicine_name;
+                    }
+                }
+
+                let statusClass = '';
+                let badgeClass = '';
+                if (l.status === 'SUCCESS') { statusClass = 'success'; badgeClass = 'badge-success'; }
+                else if (l.status === 'FAILED') { statusClass = 'missed'; badgeClass = 'badge-danger'; }
+                else { badgeClass = 'badge-warning'; }
+
+                const dateStr = l.dispense_datetime ? new Date(l.dispense_datetime).toLocaleString() : 'Unknown Date';
+
+                li.className = `timeline-item ${statusClass} fade-in`;
+                li.innerHTML = `
+                    <div class="timeline-content">
+                        <div class="timeline-date">${dateStr}</div>
+                        <div class="timeline-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: bold; color: var(--primary-color);">${medName}</span>
+                                <br/>
+                                <span style="font-size: 0.9rem;">Dispensed Qty: ${l.quantity_dispensed}</span>
+                            </div>
+                            <span class="badge ${badgeClass}">${l.status}</span>
+                        </div>
+                    </div>
+                `;
+                historyUl.appendChild(li);
+            });
+        } catch (e) {
+            historyUl.innerHTML = `<li class="timeline-item"><div class="timeline-content error">Error loading history: ${e.message}</div></li>`;
+        }
+    },
+
+    async deletePrescription(rxId, patientId, patientName) {
+        if (!confirm(`Are you sure you want to delete Prescription #${rxId}? This will remove all items and schedules.`)) return;
+        try {
+            await apiFetch(`/prescriptions/${rxId}`, { method: 'DELETE' });
+            this.viewPatient(patientId, patientName);
+        } catch (e) {
+            alert("Error deleting prescription: " + e.message);
+        }
+    },
+
+    async deletePrescriptionItem(itemId, patientId, patientName) {
+        if (!confirm(`Are you sure you want to delete this medicine from the prescription?`)) return;
+        try {
+            await apiFetch(`/prescriptions/items/${itemId}`, { method: 'DELETE' });
+            this.viewPatient(patientId, patientName);
+        } catch (e) {
+            alert("Error deleting prescription item: " + e.message);
+        }
     }
 };
 

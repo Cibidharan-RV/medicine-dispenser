@@ -99,3 +99,34 @@ def update_prescription(db: Session, prescription_id: int, prescription_update: 
 
 def get_prescription_items(db: Session, prescription_id: int):
     return db.query(PrescriptionItem).filter(PrescriptionItem.prescription_id == prescription_id).all()
+
+def delete_prescription(db: Session, prescription_id: int):
+    db_prescription = get_prescription(db, prescription_id)
+    if not db_prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    
+    # Due to cascading foreign keys, deleting items should delete schedules.
+    # We delete items first to be safe.
+    db.query(PrescriptionItem).filter(PrescriptionItem.prescription_id == prescription_id).delete()
+    db.delete(db_prescription)
+    db.commit()
+    return True
+
+def delete_prescription_item(db: Session, prescription_item_id: int):
+    item = db.query(PrescriptionItem).filter(PrescriptionItem.prescription_item_id == prescription_item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Prescription Item not found")
+        
+    prescription_id = item.prescription_id
+    db.delete(item)
+    db.commit()
+    
+    # Optionally, if it was the last item in the prescription, we could delete the prescription itself.
+    remaining = db.query(PrescriptionItem).filter(PrescriptionItem.prescription_id == prescription_id).count()
+    if remaining == 0:
+        db_prescription = get_prescription(db, prescription_id)
+        if db_prescription:
+            db.delete(db_prescription)
+            db.commit()
+            
+    return True
