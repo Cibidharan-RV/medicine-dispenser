@@ -3,6 +3,34 @@ const API_BASE = '/api/v1';
 // --- State Management ---
 let currentUser = null;
 let currentToken = null;
+let medicineMap = {};
+let prescriptionItemMap = {};
+let scheduleMap = {};
+let pendingPrescriptionItems = [];
+
+// --- Theme Management ---
+const themeToggleBtn = document.getElementById('theme-toggle');
+const rootHtml = document.documentElement;
+
+const savedTheme = localStorage.getItem('theme') || 'light';
+rootHtml.setAttribute('data-theme', savedTheme);
+updateThemeToggleText(savedTheme);
+
+themeToggleBtn.addEventListener('click', () => {
+    const currentTheme = rootHtml.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    rootHtml.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeToggleText(newTheme);
+});
+
+function updateThemeToggleText(theme) {
+    if(theme === 'dark') {
+        themeToggleBtn.textContent = '☀️ Light Mode';
+    } else {
+        themeToggleBtn.textContent = '🌙 Dark Mode';
+    }
+}
 
 // --- Utilities ---
 function parseJwt(token) {
@@ -73,10 +101,22 @@ function handleLoginSuccess(token) {
     localStorage.setItem('access_token', token);
     
     const payload = parseJwt(token);
-    currentUser = { username: payload.sub, role: payload.role };
+    currentUser = { username: payload.sub, role: payload.role, userid: payload.userid };
     
     document.getElementById('current-user').textContent = `Logged in as ${currentUser.username} (${currentUser.role})`;
     
+    initializeDashboardData();
+}
+
+async function initializeDashboardData() {
+    try {
+        const meds = await apiFetch('/medicines/');
+        meds.forEach(m => {
+            medicineMap[m.medicine_id] = m;
+        });
+    } catch(e) {
+        console.warn("Could not load medicines", e);
+    }
     showDashboard();
 }
 
@@ -116,16 +156,26 @@ const doctorUI = {
         try {
             const users = await apiFetch('/patients/');
             const tbody = document.querySelector('#patients-table tbody');
+            const select = document.getElementById('cpr-patient-id');
             tbody.innerHTML = '';
+            if (select) select.innerHTML = '<option value="" disabled selected>Select Patient</option>';
+            
             users.forEach(u => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${u.userid || u.id || '-'}</td>
                     <td>${u.username || '-'}</td>
                     <td>${u.first_name || '-'} ${u.last_name || '-'}</td>
-                    <td>${u.role || '-'}</td>
+                    <td><span class="badge badge-primary">${u.role || '-'}</span></td>
                 `;
                 tbody.appendChild(tr);
+                
+                if (select) {
+                    const opt = document.createElement('option');
+                    opt.value = u.userid || u.id;
+                    opt.textContent = `${u.first_name || u.username} ${u.last_name || ''} (ID: ${u.userid || u.id})`;
+                    select.appendChild(opt);
+                }
             });
         } catch (err) {
             alert('Failed to load patients: ' + err.message);
@@ -159,6 +209,34 @@ const doctorUI = {
     },
     showCreatePrescriptionModal() {
         document.getElementById('create-prescription-modal').classList.remove('hidden');
+        pendingPrescriptionItems = [];
+        this.renderPendingItems();
+    },
+    renderPendingItems() {
+        const container = document.getElementById('cpr-items-container');
+        if (pendingPrescriptionItems.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; font-size: 0.9rem;">No medicines added yet.</p>';
+            return;
+        }
+        let html = '';
+        pendingPrescriptionItems.forEach((item, index) => {
+            const med = medicineMap[item.medicine_id];
+            const medName = med ? `${med.medicine_name} (${med.strength})` : `Medicine ID: ${item.medicine_id}`;
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid var(--border-color); background: #f8fafc; border-radius: 4px; margin-bottom: 0.25rem;">
+                    <div>
+                        <strong>${medName}</strong><br>
+                        <small>${item.dosage}, ${item.frequency}, for ${item.duration} days</small>
+                    </div>
+                    <button type="button" onclick="doctorUI.removePendingItem(${index})" style="background: var(--danger-color); padding: 0.25rem 0.5rem; font-size: 0.8rem;">Remove</button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    },
+    removePendingItem(index) {
+        pendingPrescriptionItems.splice(index, 1);
+        this.renderPendingItems();
     }
 };
 
@@ -209,25 +287,76 @@ document.getElementById('create-medicine-form').addEventListener('submit', async
     }
 });
 
+document.getElementById('cpr-add-medicine-btn').addEventListener('click', () => {
+    const medicineId = parseInt(document.getElementById('cpr-medicine-id').value);
+    const dosage = document.getElementById('cpr-dosage').value;
+    const durationDays = document.getElementById('cpr-duration').value;
+
+    const checkboxes = document.querySelectorAll('#cpr-schedule-times input[type="checkbox"]:checked');
+    const scheduleTimes = Array.from(checkboxes).map(cb => cb.value);
+    const scheduleLabels = Array.from(checkboxes).map(cb => cb.parentElement.textContent.trim());
+
+    if (!medicineId || !dosage || scheduleTimes.length === 0 || !durationDays) {
+        alert('Please fill out all medicine fields and select at least one schedule time.');
+        return;
+    }
+
+    const frequencyStr = `${scheduleTimes.length} times a day (${scheduleLabels.join(', ')})`;
+
+    pendingPrescriptionItems.push({
+        medicine_id: medicineId,
+        dosage: dosage,
+        frequency: frequencyStr,
+        schedule_times: scheduleTimes,
+        duration: durationDays,
+    });
+
+    document.getElementById('cpr-medicine-id').value = '';
+    document.getElementById('cpr-dosage').value = '';
+    document.getElementById('cpr-duration').value = '';
+    document.querySelectorAll('#cpr-schedule-times input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+    doctorUI.renderPendingItems();
+});
+
 document.getElementById('create-prescription-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const durationDays = parseInt(document.getElementById('cpr-duration').value);
+    if (pendingPrescriptionItems.length === 0) {
+        alert('Please add at least one medicine to the prescription.');
+        return;
+    }
+
+    const patientId = parseInt(document.getElementById('cpr-patient-id').value);
+    if (!patientId) {
+        alert('Please select a patient.');
+        return;
+    }
+
+    // Use max duration to set the end date of the prescription
+    let maxDurationDays = 0;
+    pendingPrescriptionItems.forEach(item => {
+        if (parseInt(item.duration) > maxDurationDays) {
+            maxDurationDays = parseInt(item.duration);
+        }
+    });
+
     const startDate = new Date();
     const endDate = new Date();
-    endDate.setDate(startDate.getDate() + durationDays);
+    endDate.setDate(startDate.getDate() + maxDurationDays);
 
     const payload = {
-        patient_id: parseInt(document.getElementById('cpr-patient-id').value),
-        doctor_id: currentUser ? parseInt(currentUser.username) : 1, // Actually we need doctor id. We'll rely on backend fixing doctor_id.
+        patient_id: patientId,
+        doctor_id: currentUser && currentUser.userid ? currentUser.userid : 1, 
         prescription_date: startDate.toISOString().split('T')[0],
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
-        items: [{
-            medicine_id: parseInt(document.getElementById('cpr-medicine-id').value),
-            dosage: document.getElementById('cpr-dosage').value,
-            frequency: document.getElementById('cpr-frequency').value,
-            duration: `${durationDays} days`
-        }]
+        items: pendingPrescriptionItems.map(item => ({
+            medicine_id: item.medicine_id,
+            dosage: item.dosage,
+            frequency: item.frequency,
+            schedule_times: item.schedule_times,
+            duration: `${item.duration} days`
+        }))
     };
     
     try {
@@ -239,6 +368,8 @@ document.getElementById('create-prescription-form').addEventListener('submit', a
         alert('Prescription assigned successfully!');
         document.getElementById('create-prescription-modal').classList.add('hidden');
         document.getElementById('create-prescription-form').reset();
+        pendingPrescriptionItems = [];
+        doctorUI.renderPendingItems();
     } catch (err) {
         alert('Failed to create prescription: ' + err.message);
     }
@@ -249,12 +380,41 @@ const patientUI = {
     async loadPrescriptions() {
         try {
             const prescriptions = await apiFetch('/prescriptions/');
-            const ul = document.getElementById('patient-prescriptions-list');
-            ul.innerHTML = '';
+            const container = document.getElementById('patient-prescriptions-list');
+            container.innerHTML = '';
+            
+            if (prescriptions.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">No active prescriptions.</p>';
+            }
+
             prescriptions.forEach(p => {
-                const li = document.createElement('li');
-                li.textContent = `Prescription #${p.prescription_id} (${p.start_date} to ${p.end_date})`;
-                ul.appendChild(li);
+                let itemsHtml = '';
+                if (p.items && p.items.length > 0) {
+                    p.items.forEach(item => {
+                        prescriptionItemMap[item.prescription_item_id] = item;
+                        const med = medicineMap[item.medicine_id];
+                        const medName = med ? `${med.medicine_name} (${med.strength})` : `Medicine ID: ${item.medicine_id}`;
+                        itemsHtml += `
+                            <div class="prescription-body">
+                                <div class="prescription-med">${medName}</div>
+                                <div class="prescription-sig">Take ${item.dosage}, ${item.frequency} for ${item.duration}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    itemsHtml = '<div class="prescription-sig">No items attached.</div>';
+                }
+
+                const div = document.createElement('div');
+                div.className = 'prescription-card fade-in';
+                div.innerHTML = `
+                    <div class="prescription-header">
+                        <span>Rx #${p.prescription_id}</span>
+                        <span>${p.start_date} to ${p.end_date}</span>
+                    </div>
+                    ${itemsHtml}
+                `;
+                container.appendChild(div);
             });
             this.loadSchedule();
             this.loadHistory();
@@ -267,9 +427,35 @@ const patientUI = {
             const schedules = await apiFetch('/schedules/');
             const ul = document.getElementById('patient-schedule-list');
             ul.innerHTML = '';
+            
+            if (schedules.length === 0) {
+                ul.innerHTML = '<li class="schedule-item">No upcoming doses.</li>';
+            }
+
             schedules.forEach(s => {
+                scheduleMap[s.schedule_id] = s;
                 const li = document.createElement('li');
-                li.textContent = `Schedule #${s.schedule_id} at ${s.scheduled_time} (Qty: ${s.quantity_to_dispense})`;
+                li.className = 'schedule-item fade-in';
+                
+                let medName = 'Unknown Medicine';
+                let dosageInfo = '';
+                
+                const pItem = prescriptionItemMap[s.prescription_item_id];
+                if (pItem) {
+                    const med = medicineMap[pItem.medicine_id];
+                    if (med) {
+                        medName = `${med.medicine_name} (${med.strength})`;
+                    }
+                    dosageInfo = pItem.dosage;
+                }
+
+                li.innerHTML = `
+                    <div class="schedule-time">${s.scheduled_time}</div>
+                    <div class="schedule-details">
+                        <div style="font-weight: 600;">${medName} - ${dosageInfo}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Qty to dispense: ${s.quantity_to_dispense} (Schedule #${s.schedule_id})</div>
+                    </div>
+                `;
                 ul.appendChild(li);
             });
         } catch (err) {
@@ -277,13 +463,49 @@ const patientUI = {
         }
     },
     async loadHistory() {
+        if (!currentUser || !currentUser.userid) return;
         try {
-            const logs = await apiFetch('/dispensing/logs');
+            const logs = await apiFetch(`/dispensing/history/${currentUser.userid}`);
             const ul = document.getElementById('patient-dispense-history');
             ul.innerHTML = '';
+
+            if (logs.length === 0) {
+                ul.innerHTML = '<p style="color: var(--text-secondary);">No dispense history found.</p>';
+            }
+
             logs.forEach(l => {
                 const li = document.createElement('li');
-                li.textContent = `Dispense [${l.status}]: Qty ${l.quantity_dispensed} on ${new Date(l.dispensed_at).toLocaleString()}`;
+                const isSuccess = l.status === 'COMPLETED' || l.status === 'SUCCESS';
+                const statusClass = isSuccess ? 'success' : (l.status === 'MISSED' ? 'missed' : 'pending');
+                const badgeClass = isSuccess ? 'badge-success' : (l.status === 'MISSED' ? 'badge-danger' : 'badge-warning');
+                
+                li.className = `timeline-item ${statusClass} fade-in`;
+                
+                let medName = 'Unknown';
+                const sched = scheduleMap[l.schedule_id];
+                if (sched) {
+                    const pItem = prescriptionItemMap[sched.prescription_item_id];
+                    if (pItem && medicineMap[pItem.medicine_id]) {
+                        medName = medicineMap[pItem.medicine_id].medicine_name;
+                    }
+                }
+                
+                // Use dispense_datetime instead of dispensed_at
+                const dateStr = l.dispense_datetime ? new Date(l.dispense_datetime).toLocaleString() : 'Unknown Date';
+
+                li.innerHTML = `
+                    <div class="timeline-content">
+                        <div class="timeline-date">${dateStr}</div>
+                        <div class="timeline-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: bold; color: var(--primary-color);">${medName}</span>
+                                <br/>
+                                <span style="font-size: 0.9rem;">Dispensed Qty: ${l.quantity_dispensed}</span>
+                            </div>
+                            <span class="badge ${badgeClass}">${l.status}</span>
+                        </div>
+                    </div>
+                `;
                 ul.appendChild(li);
             });
         } catch (err) {
@@ -305,8 +527,8 @@ const caregiverUI = {
                     <td>${u.userid || u.id || '-'}</td>
                     <td>${u.username || '-'}</td>
                     <td>${u.first_name || '-'} ${u.last_name || '-'}</td>
-                    <td>${u.role || '-'}</td>
-                    <td><button onclick="caregiverUI.selectPatient(${u.userid || u.id}, '${u.first_name} ${u.last_name}')">View</button></td>
+                    <td><span class="badge badge-primary">${u.role || '-'}</span></td>
+                    <td><button class="outline" onclick="caregiverUI.selectPatient(${u.userid || u.id}, '${u.first_name} ${u.last_name}')">View Records</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -319,24 +541,100 @@ const caregiverUI = {
         document.getElementById('caregiver-selected-patient-title').textContent = `Records for ${patientName}`;
         
         try {
-            // Load Schedule for Patient
-            // Ideally backend has an endpoint /caregiver/patients/{id}/schedules, for now we will fetch if backend supports
+            // Caregiver needs prescriptions loaded to populate prescriptionItemMap for this patient
+            try {
+                const prescriptions = await apiFetch(`/patients/${patientId}/prescriptions`);
+                prescriptions.forEach(p => {
+                    p.items.forEach(item => {
+                        prescriptionItemMap[item.prescription_item_id] = {
+                            prescription_id: p.prescription_id,
+                            medicine_id: item.medicine_id,
+                            dosage: item.dosage,
+                            frequency: item.frequency
+                        };
+                    });
+                });
+            } catch(e) {
+                console.warn("Could not load prescriptions for mapping", e);
+            }
+
             const schedules = await apiFetch(`/schedules/?patient_id=${patientId}`);
             const ulSchedule = document.getElementById('caregiver-patient-schedule');
             ulSchedule.innerHTML = '';
+            
+            if (schedules.length === 0) {
+                ulSchedule.innerHTML = '<li class="schedule-item">No upcoming doses.</li>';
+            }
+
             schedules.forEach(s => {
+                scheduleMap[s.schedule_id] = s;
                 const li = document.createElement('li');
-                li.textContent = `Schedule #${s.schedule_id} at ${s.scheduled_time} (Qty: ${s.quantity_to_dispense})`;
+                li.className = 'schedule-item';
+                
+                let medName = 'Unknown Medicine';
+                let dosageInfo = '';
+                
+                // To get medName for caregiver, we'd need prescriptions fetched.
+                // Assuming caregiver dashboard calls loadPrescriptions first or we just show ID if unknown.
+                const pItem = prescriptionItemMap[s.prescription_item_id];
+                if (pItem) {
+                    const med = medicineMap[pItem.medicine_id];
+                    if (med) {
+                        medName = `${med.medicine_name} (${med.strength})`;
+                    }
+                    dosageInfo = pItem.dosage;
+                }
+
+                li.innerHTML = `
+                    <div class="schedule-time">${s.scheduled_time}</div>
+                    <div class="schedule-details">
+                        <div style="font-weight: 600;">${medName} - ${dosageInfo}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Qty to dispense: ${s.quantity_to_dispense} (Schedule #${s.schedule_id})</div>
+                    </div>
+                `;
                 ulSchedule.appendChild(li);
             });
             
-            // Load History for Patient
-            const logs = await apiFetch(`/dispensing/logs?patient_id=${patientId}`);
+            const logs = await apiFetch(`/dispensing/history/${patientId}`);
             const ulHistory = document.getElementById('caregiver-patient-history');
             ulHistory.innerHTML = '';
+
+            if (logs.length === 0) {
+                ulHistory.innerHTML = '<p style="color: var(--text-secondary);">No dispense history found.</p>';
+            }
+
             logs.forEach(l => {
                 const li = document.createElement('li');
-                li.textContent = `Dispense [${l.status}]: Qty ${l.quantity_dispensed} on ${new Date(l.dispensed_at).toLocaleString()}`;
+                const isSuccess = l.status === 'COMPLETED' || l.status === 'SUCCESS';
+                const statusClass = isSuccess ? 'success' : (l.status === 'MISSED' ? 'missed' : 'pending');
+                const badgeClass = isSuccess ? 'badge-success' : (l.status === 'MISSED' ? 'badge-danger' : 'badge-warning');
+                
+                let medName = 'Unknown';
+                // For caregiver view, we'll try our best if scheduleMap has it (we need to populate scheduleMap in caregiver load schedule too)
+                const sched = scheduleMap[l.schedule_id];
+                if (sched) {
+                    const pItem = prescriptionItemMap[sched.prescription_item_id];
+                    if (pItem && medicineMap[pItem.medicine_id]) {
+                        medName = medicineMap[pItem.medicine_id].medicine_name;
+                    }
+                }
+
+                const dateStr = l.dispense_datetime ? new Date(l.dispense_datetime).toLocaleString() : 'Unknown Date';
+
+                li.className = `timeline-item ${statusClass}`;
+                li.innerHTML = `
+                    <div class="timeline-content">
+                        <div class="timeline-date">${dateStr}</div>
+                        <div class="timeline-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: bold; color: var(--primary-color);">${medName}</span>
+                                <br/>
+                                <span style="font-size: 0.9rem;">Dispensed Qty: ${l.quantity_dispensed}</span>
+                            </div>
+                            <span class="badge ${badgeClass}">${l.status}</span>
+                        </div>
+                    </div>
+                `;
                 ulHistory.appendChild(li);
             });
         } catch (err) {
@@ -351,19 +649,22 @@ const simulationUI = {
     
     async checkDueMedicine() {
         const out = document.getElementById('sim-output');
-        const patientId = document.getElementById('sim-patient-id').value;
+        const nfcUid = document.getElementById('sim-nfc-uid').value;
         out.textContent = 'Checking due medicine...';
         
         let url = '/dispensing/due';
-        if (patientId) {
-            url += `?patient_id=${patientId}`;
+        if (nfcUid) {
+            url += `?nfc_uid=${nfcUid}`;
+        } else {
+            out.textContent = "Error: Please enter a Simulated NFC UID.";
+            return;
         }
-        
+
         try {
-            const due = await apiFetch(url);
+            const due = await apiFetch(url, { headers: { 'X-Hardware-Api-Key': 'esp32-default-secret-key' } });
             if (due && due.length > 0) {
                 this.currentDue = due[0];
-                out.textContent = `Medicine Due!\nSchedule ID: ${this.currentDue.schedule_id}\nQuantity: ${this.currentDue.quantity_to_dispense}\nMedicine: ${this.currentDue.medicine_name}`;
+                out.textContent = `Medicine Due!\nSchedule ID: ${this.currentDue.schedule_id}\nQuantity: ${this.currentDue.quantity_to_dispense}\nMedicine: ${this.currentDue.medicine_name || this.currentDue.medicine_id || 'Unknown'}`;
                 document.getElementById('sim-dispense-btn').disabled = false;
             } else {
                 this.currentDue = null;
@@ -377,19 +678,31 @@ const simulationUI = {
     },
     
     async dispenseMedicine() {
-        if (!this.currentDue) return;
         const out = document.getElementById('sim-output');
+        if (!this.currentDue) {
+            out.textContent = "No schedule selected. Please 'Check Due' first.";
+            return;
+        }
         out.textContent = 'Dispensing in progress...';
         document.getElementById('sim-dispense-btn').disabled = true;
+
+        const nfcUid = document.getElementById('sim-nfc-uid').value;
+        if (!nfcUid) {
+            out.textContent = "Error: Please enter a Simulated NFC UID.";
+            return;
+        }
         
         try {
             const payload = {
                 schedule_id: this.currentDue.schedule_id,
-                quantity: this.currentDue.quantity_to_dispense
+                nfc_uid: nfcUid
             };
             const result = await apiFetch('/dispensing/dispense', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Hardware-Api-Key': 'esp32-default-secret-key'
+                },
                 body: JSON.stringify(payload)
             });
             

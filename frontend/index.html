@@ -1,171 +1,245 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Medicine Dispenser System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <header>
         <h1>Medicine Dispenser System</h1>
-        <div id="user-info" class="hidden">
-            <span id="current-user"></span>
-            <button id="logout-btn">Logout</button>
+        <div class="header-actions">
+            <button id="theme-toggle" class="theme-toggle">🌙 Dark Mode</button>
+            <div id="user-info" class="hidden" style="display: flex; align-items: center; gap: 1rem;">
+                <span id="current-user" style="font-weight: 500;"></span>
+                <button id="logout-btn" class="outline">Logout</button>
+            </div>
         </div>
     </header>
 
     <main>
         <!-- Login Section -->
-        <section id="login-section">
-            <h2>Login</h2>
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" required>
-                </div>
-                <button type="submit">Login</button>
-                <div id="login-error" class="error hidden"></div>
-            </form>
+        <section id="login-section" class="fade-in">
+            <div class="form-container card">
+                <h2 style="margin-top: 0; color: var(--primary-color);">Welcome Back</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">Please sign in to access your dashboard.</p>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" style="width: 100%; margin-top: 1rem;">Sign In</button>
+                    <div id="login-error" class="error hidden"></div>
+                </form>
+            </div>
         </section>
 
         <!-- Doctor Dashboard -->
-        <section id="doctor-dashboard" class="hidden dashboard">
-            <h2>Doctor Dashboard</h2>
-            <div class="actions">
-                <button onclick="doctorUI.loadPatients()">Refresh Patients</button>
-                <button onclick="document.getElementById('create-patient-modal').classList.remove('hidden')">Create Patient</button>
-                <button onclick="doctorUI.showCreatePrescriptionModal()">Create Prescription</button>
+        <section id="doctor-dashboard" class="hidden dashboard fade-in">
+            <div class="dashboard-section">
+                <h2>Doctor Dashboard</h2>
+                <div class="actions">
+                    <button onclick="doctorUI.loadPatients()">↻ Refresh Patients</button>
+                    <button onclick="document.getElementById('create-patient-modal').classList.remove('hidden')">+ Create Patient</button>
+                    <button onclick="doctorUI.showCreatePrescriptionModal()">+ Assign Prescription</button>
+                </div>
             </div>
             
-            <div id="doctor-patients-view">
-                <h3>System Patients</h3>
-                <table id="patients-table">
-                    <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Role</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+            <div class="dashboard-grid">
+                <div id="doctor-patients-view" class="dashboard-section">
+                    <h3>System Patients</h3>
+                    <div class="table-container">
+                        <table id="patients-table">
+                            <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Role</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="doctor-medicines-view" class="dashboard-section">
+                    <h3>Available Medicines</h3>
+                    <div class="actions" style="margin-bottom: 1rem;">
+                        <button onclick="document.getElementById('create-medicine-modal').classList.remove('hidden')">+ Add Medicine</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="medicines-table">
+                            <thead><tr><th>ID</th><th>Name</th><th>Strength</th><th>Form</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- Create Patient Modal -->
             <div id="create-patient-modal" class="modal hidden">
                 <div class="modal-content">
                     <span class="close" onclick="document.getElementById('create-patient-modal').classList.add('hidden')">&times;</span>
-                    <h3>Create New Patient</h3>
+                    <h3 style="margin-top: 0; color: var(--primary-color);">Create New Patient</h3>
                     <form id="create-patient-form">
                         <div class="form-group"><label>Username</label><input type="text" id="cp-username" required></div>
-                        <div class="form-group"><label>Password</label><input type="password" id="cp-password" required></div>
+                        <div class="form-group"><label>Password</label><input type="password" id="cp-password" required minlength="6" placeholder="Min 6 characters"></div>
                         <div class="form-group"><label>First Name</label><input type="text" id="cp-firstname" required></div>
                         <div class="form-group"><label>Last Name</label><input type="text" id="cp-lastname" required></div>
-                        <button type="submit">Create Patient</button>
+                        <button type="submit" style="width: 100%;">Create Patient</button>
                     </form>
                 </div>
             </div>
 
+            <!-- Create Prescription Modal -->
             <div id="create-prescription-modal" class="modal hidden">
                 <div class="modal-content">
                     <span class="close" onclick="document.getElementById('create-prescription-modal').classList.add('hidden')">&times;</span>
                     <form id="create-prescription-form">
-                        <h3>Create Prescription</h3>
-                        <div class="form-group"><label>Patient ID</label><input type="number" id="cpr-patient-id" required></div>
-                        <div class="form-group"><label>Medicine</label><select id="cpr-medicine-id" required><option value="" disabled selected>Select Medicine</option></select></div>
-                        <div class="form-group"><label>Dosage</label><input type="text" id="cpr-dosage" placeholder="e.g. 500mg" required></div>
-                        <div class="form-group"><label>Frequency</label><input type="text" id="cpr-frequency" placeholder="e.g. 1 per day" required></div>
-                        <div class="form-group"><label>Duration (days)</label><input type="number" id="cpr-duration" required></div>
-                        <button type="submit">Assign</button>
+                        <h3 style="margin-top: 0; color: var(--primary-color);">Assign Prescription</h3>
+                        <div class="form-group"><label>Patient</label>
+                            <!-- We use a select dropdown because doctorUI.loadPatients can populate it -->
+                            <select id="cpr-patient-id" required>
+                                <option value="" disabled selected>Select Patient</option>
+                            </select>
+                        </div>
+                        
+                        <!-- List of added items -->
+                        <div id="cpr-items-container" style="margin-bottom: 1rem; max-height: 150px; overflow-y: auto;">
+                            <!-- Items will be injected here as rows -->
+                        </div>
+
+                        <div style="border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1rem;">
+                            <h4 style="margin-top: 0; color: var(--primary-color);">Add Medicine</h4>
+                            <div class="form-group"><label>Medicine</label>
+                                <select id="cpr-medicine-id">
+                                    <option value="" disabled selected>Select Medicine</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Dosage</label><input type="text" id="cpr-dosage" placeholder="e.g. 500mg"></div>
+                            
+                            <div class="form-group">
+                                <label>Schedule Times</label>
+                                <div id="cpr-schedule-times" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                                    <label style="font-weight: normal; font-size: 0.9rem;"><input type="checkbox" value="08:00"> Morning</label>
+                                    <label style="font-weight: normal; font-size: 0.9rem;"><input type="checkbox" value="13:00"> Noon</label>
+                                    <label style="font-weight: normal; font-size: 0.9rem;"><input type="checkbox" value="18:00"> Evening</label>
+                                    <label style="font-weight: normal; font-size: 0.9rem;"><input type="checkbox" value="21:00"> Night</label>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group"><label>Duration (days)</label><input type="number" id="cpr-duration" min="1"></div>
+                            <button type="button" id="cpr-add-medicine-btn" class="button-secondary" style="width: 100%; background: #e2e8f0; color: #1e293b; margin-top: 0.5rem;">+ Add to Prescription</button>
+                        </div>
+                        
+                        <button type="submit" style="width: 100%;">Assign Prescription</button>
                     </form>
                 </div>
-            </div>
-
-            <div id="doctor-medicines-view">
-                <h3>Available Medicines</h3>
-                <button onclick="document.getElementById('create-medicine-modal').classList.remove('hidden')">Add Medicine</button>
-                <table id="medicines-table">
-                    <thead><tr><th>ID</th><th>Name</th><th>Strength</th><th>Form</th></tr></thead>
-                    <tbody></tbody>
-                </table>
             </div>
 
             <!-- Create Medicine Modal -->
             <div id="create-medicine-modal" class="modal hidden">
                 <div class="modal-content">
                     <span class="close" onclick="document.getElementById('create-medicine-modal').classList.add('hidden')">&times;</span>
-                    <h3>Add Medicine</h3>
+                    <h3 style="margin-top: 0; color: var(--primary-color);">Add Medicine</h3>
                     <form id="create-medicine-form">
                         <div class="form-group"><label>Medicine Name</label><input type="text" id="cm-name" required></div>
                         <div class="form-group"><label>Strength</label><input type="text" id="cm-strength" required></div>
                         <div class="form-group"><label>Dosage Form</label><input type="text" id="cm-form" required></div>
                         <div class="form-group"><label>Manufacturer</label><input type="text" id="cm-manufacturer"></div>
-                        <button type="submit">Add Medicine</button>
+                        <button type="submit" style="width: 100%;">Add Medicine</button>
                     </form>
                 </div>
             </div>
         </section>
 
         <!-- Patient Dashboard -->
-        <section id="patient-dashboard" class="hidden dashboard">
-            <h2>Patient Dashboard</h2>
+        <section id="patient-dashboard" class="hidden dashboard fade-in">
+            <h2 style="margin-bottom: 2rem;">Patient Dashboard</h2>
             <div class="dashboard-grid">
-                <div>
+                
+                <div class="dashboard-section">
                     <h3>My Prescriptions</h3>
-                    <ul id="patient-prescriptions-list"></ul>
+                    <div id="patient-prescriptions-list">
+                        <!-- Populated by JS with paper-style cards -->
+                    </div>
                 </div>
-                <div>
-                    <h3>My Schedule</h3>
-                    <ul id="patient-schedule-list"></ul>
+                
+                <div class="dashboard-section">
+                    <h3>Upcoming Schedule</h3>
+                    <div class="card" style="padding: 1rem;">
+                        <ul id="patient-schedule-list" class="schedule-list">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
                 </div>
-                <div>
-                    <h3>My Dispense History</h3>
-                    <ul id="patient-dispense-history"></ul>
+                
+                <div class="dashboard-section" style="grid-column: 1 / -1; max-width: 800px;">
+                    <h3>Dispense History</h3>
+                    <div class="card">
+                        <ul id="patient-dispense-history" class="timeline">
+                            <!-- Populated by JS with timeline styling -->
+                        </ul>
+                    </div>
                 </div>
+                
             </div>
         </section>
 
         <!-- Caregiver Dashboard -->
-        <section id="caregiver-dashboard" class="hidden dashboard">
-            <h2>Caregiver Dashboard</h2>
-            <div class="actions">
-                <button onclick="caregiverUI.loadPatients()">Refresh Patients</button>
+        <section id="caregiver-dashboard" class="hidden dashboard fade-in">
+            <div class="dashboard-section">
+                <h2>Caregiver Dashboard</h2>
+                <div class="actions">
+                    <button onclick="caregiverUI.loadPatients()">↻ Refresh Patients</button>
+                </div>
             </div>
-            <div id="caregiver-patients-list">
+            
+            <div id="caregiver-patients-list" class="dashboard-section">
                 <h3>Assigned Patients</h3>
-                <table id="caregiver-patients-table">
-                    <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Role</th><th>Action</th></tr></thead>
-                    <tbody></tbody>
-                </table>
+                <div class="table-container">
+                    <table id="caregiver-patients-table">
+                        <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Role</th><th>Action</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
 
-            <div id="caregiver-selected-patient-view" class="hidden">
-                <h3 id="caregiver-selected-patient-title"></h3>
+            <div id="caregiver-selected-patient-view" class="hidden fade-in" style="margin-top: 3rem;">
+                <h3 id="caregiver-selected-patient-title" style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;"></h3>
                 <div class="dashboard-grid">
                     <div>
                         <h4>Medication Schedule</h4>
-                        <ul id="caregiver-patient-schedule"></ul>
+                        <div class="card" style="padding: 1rem;">
+                            <ul id="caregiver-patient-schedule" class="schedule-list"></ul>
+                        </div>
                     </div>
                     <div>
                         <h4>Dispense History</h4>
-                        <ul id="caregiver-patient-history"></ul>
+                        <div class="card">
+                            <ul id="caregiver-patient-history" class="timeline"></ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- ESP32 Simulation (Development Only) -->
-        <section id="esp32-simulation" class="hidden dashboard" style="border: 2px dashed #f39c12; padding: 10px; margin-top: 20px;">
-            <h2>ESP32 Dispensing Simulation (Test)</h2>
-            <p>This simulates the ESP32 checking for due medicine and dispensing it via RFID scan.</p>
-            <div class="form-group" style="margin-bottom: 10px;">
-                <label for="sim-patient-id">Simulated RFID Patient ID:</label>
-                <input type="number" id="sim-patient-id" placeholder="Patient ID (e.g., 1)" style="width: 200px;">
+        <section id="esp32-simulation" class="hidden dashboard sim-container fade-in">
+            <div class="sim-header">
+                <h2>⚙️ ESP32 Dispensing Simulation (Test)</h2>
+                <button class="outline" onclick="document.getElementById('esp32-simulation').classList.add('hidden')" style="border-color: var(--warning); color: var(--warning);">Dismiss</button>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">This simulates the ESP32 checking for due medicine and dispensing it via RFID scan.</p>
+            <div class="form-group" style="max-width: 400px;">
+                <label for="sim-nfc-uid">Simulated NFC UID:</label>
+                <input type="text" id="sim-nfc-uid" placeholder="e.g. test-patient-card-1234">
             </div>
             <div class="actions">
-                <button onclick="simulationUI.checkDueMedicine()">1. Check Due Medicine</button>
-                <button onclick="simulationUI.dispenseMedicine()" id="sim-dispense-btn" disabled>2. Perform Dispense</button>
+                <button style="background-color: var(--warning); color: #000;" onclick="simulationUI.checkDueMedicine()">1. Check Due</button>
+                <button id="sim-dispense-btn" disabled onclick="simulationUI.dispenseMedicine()">2. Dispense</button>
             </div>
-            <div id="sim-output" style="background: #222; color: #0f0; padding: 10px; margin-top: 10px; font-family: monospace; min-height: 50px;">
+            <div id="sim-output" class="card" style="background: #111; color: #0f0; margin-top: 1rem; font-family: monospace; min-height: 80px; border-color: #333;">
                 Ready...
             </div>
         </section>
