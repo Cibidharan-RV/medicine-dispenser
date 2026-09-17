@@ -9,7 +9,7 @@ class PrescriptionItemBase(BaseModel):
     duration: str = Field(..., max_length=100)
 
 class PrescriptionItemCreate(PrescriptionItemBase):
-    pass
+    schedule_times: Optional[List[str]] = None
 
 class PrescriptionItemOut(PrescriptionItemBase):
     prescription_item_id: int

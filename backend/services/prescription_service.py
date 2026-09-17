@@ -2,8 +2,10 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from backend.models.prescription import Prescription
 from backend.models.prescription_item import PrescriptionItem
+from backend.models.dispense_schedule import DispenseSchedule
 from backend.schemas.prescription import PrescriptionCreate, PrescriptionUpdate
-from datetime import date
+from datetime import date, time
+import re
 
 from backend.models.user import User
 from backend.models.caregiver import CaregiverPatient
@@ -43,6 +45,41 @@ def create_prescription(db: Session, prescription: PrescriptionCreate, doctor_id
             duration=item.duration
         )
         db.add(new_item)
+        db.flush() # Get new_item.prescription_item_id
+        
+        schedule_times = []
+        if getattr(item, 'schedule_times', None):
+            for t_str in item.schedule_times:
+                # expecting t_str like "08:00"
+                try:
+                    parts = t_str.split(':')
+                    schedule_times.append(time(int(parts[0]), int(parts[1])))
+                except:
+                    pass
+        else:
+            freq_str = str(item.frequency).lower()
+            match = re.search(r'(\d+)', freq_str)
+            times_per_day = int(match.group(1)) if match else 1
+            times_per_day = min(max(times_per_day, 1), 4)
+            
+            if times_per_day == 1:
+                schedule_times = [time(8, 0)]
+            elif times_per_day == 2:
+                schedule_times = [time(8, 0), time(20, 0)]
+            elif times_per_day == 3:
+                schedule_times = [time(8, 0), time(14, 0), time(20, 0)]
+            else:
+                schedule_times = [time(8, 0), time(12, 0), time(16, 0), time(20, 0)]
+            
+        for t in schedule_times:
+            sched = DispenseSchedule(
+                prescription_item_id=new_item.prescription_item_id,
+                scheduled_time=t,
+                quantity_to_dispense=1,
+                start_date=new_prescription.start_date,
+                end_date=new_prescription.end_date
+            )
+            db.add(sched)
     
     db.commit()
     db.refresh(new_prescription)
