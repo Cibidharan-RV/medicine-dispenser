@@ -8,14 +8,16 @@ from backend.models.caregiver import CaregiverPatient
 from backend.models.prescription_item import PrescriptionItem
 from backend.models.prescription import Prescription
 
-def get_schedules(db: Session, current_user: User, prescription_item_id: int = None):
+def get_schedules(db: Session, current_user: User, prescription_item_id: int = None, patient_id: int = None):
     query = db.query(DispenseSchedule)
     
     if current_user.role == "PATIENT":
         query = query.join(PrescriptionItem, DispenseSchedule.prescription_item_id == PrescriptionItem.prescription_item_id).join(Prescription, PrescriptionItem.prescription_id == Prescription.prescription_id).filter(Prescription.patient_id == current_user.userid)
     elif current_user.role == "CAREGIVER":
         query = query.join(PrescriptionItem, DispenseSchedule.prescription_item_id == PrescriptionItem.prescription_item_id).join(Prescription, PrescriptionItem.prescription_id == Prescription.prescription_id).join(CaregiverPatient, Prescription.patient_id == CaregiverPatient.patient_id).filter(CaregiverPatient.caregiver_id == current_user.userid)
-        
+        if patient_id:
+            query = query.filter(Prescription.patient_id == patient_id)
+            
     if prescription_item_id:
         query = query.filter(DispenseSchedule.prescription_item_id == prescription_item_id)
     return query.all()

@@ -10,8 +10,8 @@ from backend.models.user import User
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 @router.get("/", response_model=List[DispenseScheduleOut])
-def read_schedules(prescription_item_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return schedule_service.get_schedules(db, current_user, prescription_item_id=prescription_item_id)
+def read_schedules(prescription_item_id: Optional[int] = None, patient_id: Optional[int] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return schedule_service.get_schedules(db, current_user, prescription_item_id=prescription_item_id, patient_id=patient_id)
 
 @router.post("/", response_model=DispenseScheduleOut, status_code=status.HTTP_201_CREATED)
 def create_schedule(schedule: DispenseScheduleCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role("DOCTOR"))):
