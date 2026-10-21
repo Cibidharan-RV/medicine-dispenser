@@ -14,7 +14,8 @@
       "role": "PATIENT",
       "first_name": "John",
       "last_name": "Doe",
-      "phone_number": "555-0102"
+      "phone_number": "555-0102",
+      "nfc_uid": "A1:B2:C3:D4"
     },
     {
       "username": "caregiver1",
@@ -22,7 +23,8 @@
       "role": "CAREGIVER",
       "first_name": "Mary",
       "last_name": "Doe",
-      "phone_number": "555-0103"
+      "phone_number": "555-0103",
+      "nfc_uid": "E5:F6:A7:B8"
     }
   ],
   "medicines": [

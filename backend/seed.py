@@ -8,6 +8,7 @@ from backend.models.doctor import Doctor
 from backend.models.caregiver import Caregiver, CaregiverPatient
 from backend.models.medicine import Medicine
 from backend.models.dispenser_slot import DispenserSlot
+from backend.models.nfc_card import NfcCard
 from backend.auth.security import get_password_hash
 
 def seed_db():
@@ -51,6 +52,12 @@ def seed_db():
                     ))
                 elif new_user.role == "CAREGIVER":
                     db.add(Caregiver(userid=new_user.userid))
+
+                if "nfc_uid" in u:
+                    db.add(NfcCard(
+                        userid=new_user.userid,
+                        nfc_uid=u["nfc_uid"]
+                    ))
         
         # Seed Medicines
         print("Seeding medicines...")

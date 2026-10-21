@@ -413,7 +413,7 @@ const doctorUI = {
                 }
 
                 li.innerHTML = `
-                    <div class="schedule-time">${s.scheduled_time}</div>
+                    <div class="schedule-time">${s.scheduled_time.substring(0, 5)}</div>
                     <div class="schedule-details">
                         <div style="font-weight: 600;">${medName} - ${dosageInfo}</div>
                         <div style="color: var(--text-secondary); font-size: 0.9rem;">Qty: ${s.quantity_to_dispense} (Schedule #${s.schedule_id})</div>
@@ -747,7 +747,7 @@ const patientUI = {
                 }
 
                 li.innerHTML = `
-                    <div class="schedule-time">${s.scheduled_time}</div>
+                    <div class="schedule-time">${s.scheduled_time.substring(0, 5)}</div>
                     <div class="schedule-details">
                         <div style="font-weight: 600;">${medName} - ${dosageInfo}</div>
                         <div style="color: var(--text-secondary); font-size: 0.9rem;">Qty to dispense: ${s.quantity_to_dispense} (Schedule #${s.schedule_id})</div>
@@ -883,7 +883,7 @@ const caregiverUI = {
                 }
 
                 li.innerHTML = `
-                    <div class="schedule-time">${s.scheduled_time}</div>
+                    <div class="schedule-time">${s.scheduled_time.substring(0, 5)}</div>
                     <div class="schedule-details">
                         <div style="font-weight: 600;">${medName} - ${dosageInfo}</div>
                         <div style="color: var(--text-secondary); font-size: 0.9rem;">Qty to dispense: ${s.quantity_to_dispense} (Schedule #${s.schedule_id})</div>

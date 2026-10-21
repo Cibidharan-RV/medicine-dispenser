@@ -11,6 +11,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
+    nfc_uid: Optional[str] = Field(None, description="Optional NFC Card UID to assign during creation")
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = Field(None, max_length=50)

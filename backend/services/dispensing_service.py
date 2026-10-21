@@ -57,6 +57,7 @@ def get_due_schedules(db: Session, target_time: datetime = None, patient_id: int
             
             if med:
                 schedule.medicine_name = med.medicine_name
+                schedule.medicine_id = med.medicine_id
             due_schedules.append(schedule)
             
     return due_schedules

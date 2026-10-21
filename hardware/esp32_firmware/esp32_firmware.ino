@@ -7,12 +7,12 @@
 // ==========================================
 // CONFIGURATION
 // ==========================================
-const char* WIFI_SSID = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID = "Cibi's iPhone";
+const char* WIFI_PASSWORD = "112233444";
 
 // Use the local IP of your backend server (e.g., http://192.168.1.100:9001)
 // Do NOT use localhost or 127.0.0.1, as the ESP32 is on a separate device.
-const char* API_BASE_URL = "http://192.168.1.5:9001";
+const char* API_BASE_URL = "http://172.20.10.10:9001";
 const char* HARDWARE_API_KEY = "super_secret_hardware_key_123";
 
 // ==========================================

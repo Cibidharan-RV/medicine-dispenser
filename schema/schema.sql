@@ -318,4 +318,24 @@ CREATE TABLE DISPENSE_LOG (
         CHECK (Status IN ('SUCCESS', 'FAILED', 'PARTIAL'))
 );
 
+-- =========================================================
+-- 15. NFC CARD
+-- =========================================================
+CREATE TABLE NFC_CARD (
+    CardID BIGINT GENERATED ALWAYS AS IDENTITY,
+    UserID BIGINT NOT NULL,
+    NfcUid VARCHAR(255) NOT NULL,
+    IsActive BOOLEAN DEFAULT TRUE,
+    AssignedAt TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
+    CONSTRAINT pk_nfc_card 
+        PRIMARY KEY (CardID),
+        
+    CONSTRAINT uq_nfc_uid 
+        UNIQUE (NfcUid),
+
+    CONSTRAINT fk_nfc_user 
+        FOREIGN KEY (UserID) 
+        REFERENCES "USER"(UserID) 
+        ON DELETE CASCADE
+);
